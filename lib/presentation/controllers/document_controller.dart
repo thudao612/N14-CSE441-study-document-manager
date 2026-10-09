@@ -8,6 +8,7 @@ import '../../usecases/get_document_stats_usecase.dart';
 import '../../usecases/get_documents_usecase.dart';
 import '../../usecases/search_documents_usecase.dart';
 import '../../usecases/update_document_usecase.dart';
+import '../../usecases/upload_document_file_usecase.dart';
 
 /// Controller quản lý trạng thái của ứng dụng theo mô hình Reactive (Presentation Layer)
 class DocumentController extends ChangeNotifier {
@@ -17,6 +18,7 @@ class DocumentController extends ChangeNotifier {
   final SearchDocumentsUseCase _searchDocumentsUseCase;
   final GetDocumentsUseCase _getDocumentsUseCase;
   final GetDocumentStatsUseCase _getDocumentStatsUseCase;
+  final UploadDocumentFileUseCase? _uploadDocumentFileUseCase;
 
   DocumentController({
     required AddDocumentUseCase addDocumentUseCase,
@@ -25,12 +27,14 @@ class DocumentController extends ChangeNotifier {
     required SearchDocumentsUseCase searchDocumentsUseCase,
     required GetDocumentsUseCase getDocumentsUseCase,
     required GetDocumentStatsUseCase getDocumentStatsUseCase,
+    UploadDocumentFileUseCase? uploadDocumentFileUseCase,
   })  : _addDocumentUseCase = addDocumentUseCase,
         _updateDocumentUseCase = updateDocumentUseCase,
         _deleteDocumentUseCase = deleteDocumentUseCase,
         _searchDocumentsUseCase = searchDocumentsUseCase,
         _getDocumentsUseCase = getDocumentsUseCase,
-        _getDocumentStatsUseCase = getDocumentStatsUseCase;
+        _getDocumentStatsUseCase = getDocumentStatsUseCase,
+        _uploadDocumentFileUseCase = uploadDocumentFileUseCase;
 
   // --- STATE ---
   List<Document> _documents = [];
@@ -51,6 +55,7 @@ class DocumentController extends ChangeNotifier {
   List<String> get tags => _tags;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
+  bool get canUploadDocumentFile => _uploadDocumentFileUseCase != null;
 
   /// Khởi tạo và nạp dữ liệu ban đầu
   Future<void> init() async {
@@ -76,6 +81,24 @@ class DocumentController extends ChangeNotifier {
   }
 
   /// Thêm tài liệu mới thông qua UseCase
+  Future<String> uploadDocumentFile({
+    required String fileName,
+    required List<int> bytes,
+  }) async {
+    final useCase = _uploadDocumentFileUseCase;
+
+    if (useCase == null) {
+      throw StateError(
+        'UploadDocumentFileUseCase chưa được cấu hình.',
+      );
+    }
+
+    return useCase.execute(
+      fileName: fileName,
+      bytes: bytes,
+    );
+  }
+
   Future<bool> addDocument(AddDocumentParams params) async {
     _setLoading(true);
     _clearError();
@@ -85,7 +108,10 @@ class DocumentController extends ChangeNotifier {
       await loadData();
       return true;
     } catch (e) {
-      _errorMessage = e.toString().replaceFirst('Exception: ', '').replaceFirst('ArgumentError: ', '');
+      _errorMessage = e
+          .toString()
+          .replaceFirst('Exception: ', '')
+          .replaceFirst('ArgumentError: ', '');
       _setLoading(false);
       return false;
     }
@@ -101,7 +127,10 @@ class DocumentController extends ChangeNotifier {
       await loadData();
       return true;
     } catch (e) {
-      _errorMessage = e.toString().replaceFirst('Exception: ', '').replaceFirst('ArgumentError: ', '');
+      _errorMessage = e
+          .toString()
+          .replaceFirst('Exception: ', '')
+          .replaceFirst('ArgumentError: ', '');
       _setLoading(false);
       return false;
     }
