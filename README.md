@@ -27,7 +27,7 @@ Hệ thống Quản lý Tài liệu Học tập dành cho sinh viên - Báo cáo
 | **TV2** | **Nhóm trưởng** & Cloud Architect | **3, 4** |  | • Lựa chọn mô hình Public Cloud (Firebase/GCP).<br>• Thiết kế Sơ đồ Kiến trúc Cloud & Luồng dữ liệu (Data Flow). |
 | **TV3** | TRỊNH MẠNH ĐỨC | **5, 6** |  | • Đánh giá Bảo mật, Chi phí & Hiệu suất.<br>• Khởi tạo Firebase Project, cài SHA-1, Google Auth & Rules. |
 | **TV4** | TRẦN ĐỨC TRUNG | **6** | `feature/tv4-flutter-firebase` | • Tích hợp Firebase SDK vào Flutter.<br>• Thay DataSource in-memory bằng Cloud Firestore & Storage. |
-| **TV5** | Phạm Kim Anh | **7** | • Thiết kế Slide thuyết trình & Tổng hợp tài liệu nộp bài. |
+| **TV5** | Phạm Kim Anh | **7** | |• Thiết kế Slide thuyết trình & Tổng hợp tài liệu nộp bài. |
 
 ---------------
 
