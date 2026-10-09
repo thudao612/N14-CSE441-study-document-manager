@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../domain/entities/document.dart';
@@ -128,6 +129,85 @@ class DocumentHomeScreen extends StatelessWidget {
             tooltip: 'Làm mới dữ liệu',
             onPressed: () => controller.loadData(),
           ),
+          Builder(
+            builder: (context) {
+              try {
+                return StreamBuilder<User?>(
+                  stream: FirebaseAuth.instance.authStateChanges(),
+                  builder: (context, snapshot) {
+                    final user = snapshot.data;
+                    if (user == null) return const SizedBox.shrink();
+                    final displayName = user.displayName ??
+                        (user.email != null ? user.email!.split('@').first : 'Khách');
+                    return PopupMenuButton<String>(
+                      tooltip: 'Tài khoản: $displayName',
+                      icon: CircleAvatar(
+                        radius: 16,
+                        backgroundColor: AppTheme.primaryLight,
+                        backgroundImage:
+                            user.photoURL != null ? NetworkImage(user.photoURL!) : null,
+                        child: user.photoURL == null
+                            ? Text(
+                                displayName.isNotEmpty
+                                    ? displayName[0].toUpperCase()
+                                    : 'U',
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppTheme.primary,
+                                ),
+                              )
+                            : null,
+                      ),
+                      itemBuilder: (context) => [
+                        PopupMenuItem(
+                          enabled: false,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                displayName,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                  color: AppTheme.textPrimary,
+                                ),
+                              ),
+                              if (user.email != null)
+                                Text(
+                                  user.email!,
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    color: AppTheme.textSecondary,
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                        const PopupMenuDivider(),
+                        const PopupMenuItem(
+                          value: 'logout',
+                          child: Row(
+                            children: [
+                              Icon(Icons.logout_rounded, color: AppTheme.error, size: 20),
+                              SizedBox(width: 8),
+                              Text('Đăng xuất', style: TextStyle(color: AppTheme.error)),
+                            ],
+                          ),
+                        ),
+                      ],
+                      onSelected: (value) async {
+                        if (value == 'logout') {
+                          await FirebaseAuth.instance.signOut();
+                        }
+                      },
+                    );
+                  },
+                );
+              } catch (_) {
+                return const SizedBox.shrink();
+              }
+            },
+          ),
           const SizedBox(width: 8),
         ],
       ),
@@ -195,6 +275,54 @@ class DocumentHomeScreen extends StatelessWidget {
                 ),
               ),
             ),
+
+            // Thông báo lỗi nếu có (ví dụ: Permission Denied từ Firestore)
+            if (controller.errorMessage != null)
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 8.0),
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFEE2E2),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFFFCA5A5)),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Icon(
+                          Icons.warning_amber_rounded,
+                          color: AppTheme.error,
+                          size: 22,
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            controller.errorMessage!,
+                            style: const TextStyle(
+                              color: AppTheme.error,
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                        IconButton(
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                          icon: const Icon(
+                            Icons.refresh_rounded,
+                            size: 20,
+                            color: AppTheme.error,
+                          ),
+                          tooltip: 'Thử lại',
+                          onPressed: () => controller.loadData(),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
 
             // 5. Nội dung: Loading / Empty State / Danh sách tài liệu
             if (controller.isLoading && docs.isEmpty)

@@ -2,10 +2,10 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import 'data/datasources/document_firestore_datasource.dart';
 import 'data/datasources/document_local_datasource.dart';
 import 'data/repositories/document_repository_impl.dart';
-import 'data/repositories/firebase_document_storage_repository.dart';
+import 'data/repositories/firestore_document_repository.dart';
+import 'domain/repositories/i_document_repository.dart';
 import 'firebase_options.dart';
 import 'presentation/controllers/document_controller.dart';
 import 'presentation/screens/document_home_screen.dart';
@@ -22,30 +22,28 @@ import 'usecases/upload_document_file_usecase.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  const useFirebase = bool.fromEnvironment(
-    'USE_FIREBASE',
-    defaultValue: false,
-  );
-
-  if (useFirebase) {
+  // Khởi tạo Firebase SDK kết nối Cloud
+  bool isFirebaseReady = false;
+  try {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
+    isFirebaseReady = true;
+  } catch (e) {
+    debugPrint('Firebase init notice: $e');
   }
 
-  final DocumentLocalDataSource dataSource = useFirebase
-      ? DocumentFirestoreDataSource()
-      : DocumentLocalDataSourceImpl(autoSeed: true);
+  // 1. Chuyển đổi Data Source / Repository sang FirestoreDocumentRepository
+  // Kết nối và đồng bộ trực tiếp collection 'documents' trên Cloud Firestore
+  final IDocumentRepository documentRepository = isFirebaseReady
+      ? FirestoreDocumentRepository()
+      : DocumentRepositoryImpl(
+          localDataSource: DocumentLocalDataSourceImpl(autoSeed: true),
+        );
 
-  final documentRepository = DocumentRepositoryImpl(
-    localDataSource: dataSource,
-  );
-
-  final UploadDocumentFileUseCase? uploadDocumentFileUseCase = useFirebase
-      ? UploadDocumentFileUseCase(
-          repository: FirebaseDocumentStorageRepository(),
-        )
-      : null;
+  // 2. Chế độ tài liệu: Sử dụng liên kết trực tiếp (Google Drive / Web URL) lưu trên Cloud Firestore
+  // Loại bỏ hoàn toàn upload tệp trực tiếp để tránh lỗi 401 Unauthorized
+  const UploadDocumentFileUseCase? uploadDocumentFileUseCase = null;
 
   final addDocumentUseCase = AddDocumentUseCase(
     repository: documentRepository,
@@ -76,9 +74,9 @@ Future<void> main() async {
     uploadDocumentFileUseCase: uploadDocumentFileUseCase,
   );
 
-  // Nạp dữ liệu sớm ở chế độ local.
-  // Khi sử dụng Firebase, FirebaseAuthGate sẽ nạp sau khi đăng nhập.
-  if (!useFirebase) {
+  // Ở chế độ local chưa có Auth, nạp dữ liệu sớm
+  // Ở chế độ Firebase, FirebaseAuthGate sẽ nạp sau khi người dùng đăng nhập thành công
+  if (!isFirebaseReady) {
     await documentController.init();
   }
 
@@ -90,7 +88,7 @@ Future<void> main() async {
         ),
       ],
       child: StudyDocumentManagerApp(
-        useFirebase: useFirebase,
+        useFirebase: isFirebaseReady,
       ),
     ),
   );
@@ -109,7 +107,7 @@ class StudyDocumentManagerApp extends StatelessWidget {
     final controller = context.read<DocumentController>();
 
     return MaterialApp(
-      title: 'Quản lý Tài liệu Học tập',
+      title: 'Quản lý Tài liệu Học tập (Firebase)',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
       home: useFirebase

@@ -2,8 +2,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 import '../controllers/document_controller.dart';
+import 'auth_sign_in_screen.dart';
 import 'document_home_screen.dart';
-import 'github_sign_in_screen.dart';
 
 class FirebaseAuthGate extends StatefulWidget {
   final DocumentController controller;
@@ -69,7 +69,7 @@ class _FirebaseAuthGateState extends State<FirebaseAuthGate> {
           _initializedUid = null;
           _initialization = null;
 
-          return const GithubSignInScreen();
+          return const AuthSignInScreen();
         }
 
         if (_initializedUid != user.uid) {

@@ -12,6 +12,8 @@ class Document {
   final bool isFavorite;
   final DateTime createdAt;
   final DateTime updatedAt;
+  final String userId;
+  final String authorEmail;
 
   const Document({
     required this.id,
@@ -24,6 +26,8 @@ class Document {
     this.isFavorite = false,
     required this.createdAt,
     required this.updatedAt,
+    this.userId = '',
+    this.authorEmail = '',
   });
 
   /// Tạo bản sao với các thuộc tính được cập nhật (Immutability pattern)
@@ -38,6 +42,8 @@ class Document {
     bool? isFavorite,
     DateTime? createdAt,
     DateTime? updatedAt,
+    String? userId,
+    String? authorEmail,
   }) {
     return Document(
       id: id ?? this.id,
@@ -50,6 +56,8 @@ class Document {
       isFavorite: isFavorite ?? this.isFavorite,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      userId: userId ?? this.userId,
+      authorEmail: authorEmail ?? this.authorEmail,
     );
   }
 

@@ -1,5 +1,3 @@
-import 'package:file_picker/file_picker.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../../domain/entities/document.dart';
 import '../../domain/entities/document_type.dart';
@@ -7,10 +5,10 @@ import '../../usecases/add_document_usecase.dart';
 import '../../usecases/update_document_usecase.dart';
 import '../controllers/document_controller.dart';
 import '../theme/app_theme.dart';
-import '../utils/file_helper.dart';
 
 /// Modal Bottom Sheet để Thêm mới hoặc Chỉnh sửa tài liệu học tập
-/// Hỗ trợ chọn tệp trực tiếp từ máy (PDF, Word) hoặc liên kết Web
+/// Sử dụng phương thức nhập Liên kết tài liệu (URL / Google Drive / Dropbox / Web)
+/// Dữ liệu được lưu trực tiếp vào collection 'documents' trên Cloud Firestore (field: fileUrlOrPath)
 class DocumentFormModal extends StatefulWidget {
   final DocumentController controller;
   final Document? initialDocument;
@@ -54,12 +52,6 @@ class _DocumentFormModalState extends State<DocumentFormModal> {
   late bool _isFavorite;
   late List<String> _tags;
 
-  // 0: Chọn tệp máy (PDF / Word), 1: Nhập liên kết web URL
-  int _attachmentMode = 0;
-  String? _pickedFileName;
-  int? _pickedFileSize;
-  Uint8List? _pickedFileBytes;
-
   bool get isEditing => widget.initialDocument != null;
 
   @override
@@ -76,16 +68,6 @@ class _DocumentFormModalState extends State<DocumentFormModal> {
     _selectedType = doc?.type ?? DocumentType.lecture;
     _isFavorite = doc?.isFavorite ?? false;
     _tags = List<String>.from(doc?.tags ?? []);
-
-    final existingFile = doc?.fileUrlOrPath ?? '';
-    if (existingFile.isNotEmpty) {
-      if (FileHelper.isWebLink(existingFile)) {
-        _attachmentMode = 1;
-      } else {
-        _attachmentMode = 0;
-        _pickedFileName = FileHelper.getFileName(existingFile);
-      }
-    }
   }
 
   @override
@@ -96,70 +78,6 @@ class _DocumentFormModalState extends State<DocumentFormModal> {
     _fileController.dispose();
     _tagInputController.dispose();
     super.dispose();
-  }
-
-  /// Mở cửa sổ chọn tệp PDF hoặc Word từ thiết bị
-  Future<void> _pickDocumentFile() async {
-    try {
-      final result = await FilePicker.platform.pickFiles(
-        type: FileType.custom,
-        allowedExtensions: ['pdf', 'doc', 'docx', 'txt'],
-        withData: true,
-      );
-
-      if (result != null && result.files.isNotEmpty) {
-        final platformFile = result.files.first;
-        final bytes = platformFile.bytes;
-
-        if (bytes == null || bytes.isEmpty) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Không đọc được nội dung tệp đã chọn.'),
-              ),
-            );
-          }
-          return;
-        }
-        final path =
-            kIsWeb ? platformFile.name : platformFile.path ?? platformFile.name;
-
-        setState(() {
-          _fileController.text = path;
-          _pickedFileName = platformFile.name;
-          _pickedFileSize = platformFile.size;
-          _pickedFileBytes = bytes;
-          _pickedFileBytes = platformFile.bytes;
-
-          // Gợi ý tiêu đề tài liệu tự động từ tên tệp nếu người dùng chưa nhập
-          if (_titleController.text.trim().isEmpty) {
-            final cleanName = platformFile.name
-                .replaceAll(RegExp(r'\.[a-zA-Z0-9]+$'), '')
-                .replaceAll('_', ' ')
-                .replaceAll('-', ' ');
-            _titleController.text = cleanName;
-          }
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Lỗi khi chọn tệp: $e'),
-            backgroundColor: AppTheme.error,
-          ),
-        );
-      }
-    }
-  }
-
-  void _clearSelectedFile() {
-    setState(() {
-      _fileController.clear();
-      _pickedFileName = null;
-      _pickedFileSize = null;
-      _pickedFileBytes = null;
-    });
   }
 
   void _addTag(String rawTag) {
@@ -186,64 +104,28 @@ class _DocumentFormModalState extends State<DocumentFormModal> {
       _addTag(_tagInputController.text);
     }
 
-    var attachmentUrl = _fileController.text.trim();
+    final link = _fileController.text.trim();
 
-    final bytes = _pickedFileBytes;
-
-    if (bytes != null && widget.controller.canUploadDocumentFile) {
-      final fileName = _pickedFileName;
-
-      if (fileName == null || fileName.trim().isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Tên tệp không hợp lệ.'),
-          ),
-        );
-        return;
-      }
-
-      try {
-        attachmentUrl = await widget.controller.uploadDocumentFile(
-          fileName: fileName,
-          bytes: bytes,
-        );
-
-        if (!mounted) return;
-
-        _fileController.text = attachmentUrl;
-        _pickedFileBytes = null;
-      } catch (e) {
-        if (!mounted) return;
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Không thể tải tệp lên: $e'),
-            backgroundColor: AppTheme.error,
-          ),
-        );
-        return;
-      }
-    }
     bool success;
     if (isEditing) {
       final params = UpdateDocumentParams(
         id: widget.initialDocument!.id,
-        title: _titleController.text,
-        subject: _subjectController.text,
+        title: _titleController.text.trim(),
+        subject: _subjectController.text.trim(),
         type: _selectedType,
-        description: _descController.text,
-        fileUrlOrPath: attachmentUrl,
+        description: _descController.text.trim(),
+        fileUrlOrPath: link,
         tags: _tags,
         isFavorite: _isFavorite,
       );
       success = await widget.controller.updateDocument(params);
     } else {
       final params = AddDocumentParams(
-        title: _titleController.text,
-        subject: _subjectController.text,
+        title: _titleController.text.trim(),
+        subject: _subjectController.text.trim(),
         type: _selectedType,
-        description: _descController.text,
-        fileUrlOrPath: attachmentUrl,
+        description: _descController.text.trim(),
+        fileUrlOrPath: link,
         tags: _tags,
         isFavorite: _isFavorite,
       );
@@ -267,7 +149,7 @@ class _DocumentFormModalState extends State<DocumentFormModal> {
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(widget.controller.errorMessage ?? 'Có lỗi xảy ra.'),
+            content: Text(widget.controller.errorMessage ?? 'Có lỗi xảy ra khi lưu tài liệu.'),
             backgroundColor: AppTheme.error,
             behavior: SnackBarBehavior.floating,
           ),
@@ -279,7 +161,6 @@ class _DocumentFormModalState extends State<DocumentFormModal> {
   @override
   Widget build(BuildContext context) {
     final keyboardPadding = MediaQuery.of(context).viewInsets.bottom;
-    final hasAttachedFile = _fileController.text.trim().isNotEmpty;
 
     return Container(
       constraints: BoxConstraints(
@@ -338,7 +219,7 @@ class _DocumentFormModalState extends State<DocumentFormModal> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Bộ chọn Loại tài liệu (Segmented Selector)
+                    // 1. Bộ chọn Loại tài liệu (Segmented Selector)
                     const Text(
                       'Loại tài liệu',
                       style: TextStyle(
@@ -353,15 +234,13 @@ class _DocumentFormModalState extends State<DocumentFormModal> {
                         final isSelected = _selectedType == type;
                         return Expanded(
                           child: Padding(
-                            padding:
-                                const EdgeInsets.symmetric(horizontal: 4.0),
+                            padding: const EdgeInsets.symmetric(horizontal: 4.0),
                             child: InkWell(
                               onTap: () => setState(() => _selectedType = type),
                               borderRadius: BorderRadius.circular(12),
                               child: AnimatedContainer(
                                 duration: const Duration(milliseconds: 150),
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 10),
+                                padding: const EdgeInsets.symmetric(vertical: 10),
                                 decoration: BoxDecoration(
                                   color: isSelected
                                       ? type.badgeBackgroundColor
@@ -406,7 +285,7 @@ class _DocumentFormModalState extends State<DocumentFormModal> {
                     ),
                     const SizedBox(height: 18),
 
-                    // Tiêu đề
+                    // 2. Tiêu đề tài liệu
                     const Text(
                       'Tiêu đề tài liệu *',
                       style: TextStyle(
@@ -434,7 +313,7 @@ class _DocumentFormModalState extends State<DocumentFormModal> {
                     ),
                     const SizedBox(height: 16),
 
-                    // Môn học
+                    // 3. Môn học
                     const Text(
                       'Môn học *',
                       style: TextStyle(
@@ -464,8 +343,7 @@ class _DocumentFormModalState extends State<DocumentFormModal> {
                         spacing: 6,
                         children: widget.controller.subjects.take(4).map((sub) {
                           return ActionChip(
-                            label:
-                                Text(sub, style: const TextStyle(fontSize: 11)),
+                            label: Text(sub, style: const TextStyle(fontSize: 11)),
                             padding: EdgeInsets.zero,
                             visualDensity: VisualDensity.compact,
                             onPressed: () {
@@ -477,228 +355,88 @@ class _DocumentFormModalState extends State<DocumentFormModal> {
                     ],
                     const SizedBox(height: 16),
 
-                    // --- KHỐI ĐÍNH KÈM TỆP (PDF / WORD / LIÊN KẾT) ---
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    // 4. Liên kết tài liệu (URL / Google Drive / Web)
+                    const Row(
                       children: [
-                        const Text(
-                          'Tệp đính kèm học tập',
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w700,
-                            color: AppTheme.textPrimary,
+                        Icon(Icons.link_rounded, size: 18, color: AppTheme.primary),
+                        SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            'Liên kết tài liệu (URL / Google Drive / Web) *',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              color: AppTheme.textPrimary,
+                            ),
                           ),
-                        ),
-                        // Nút chuyển chế độ: Tệp máy hoặc Link
-                        Row(
-                          children: [
-                            _ModeTabButton(
-                              icon: Icons.upload_file_rounded,
-                              label: 'Tệp PDF/Word',
-                              isSelected: _attachmentMode == 0,
-                              onTap: () => setState(() => _attachmentMode = 0),
-                            ),
-                            const SizedBox(width: 6),
-                            _ModeTabButton(
-                              icon: Icons.link_rounded,
-                              label: 'Link Web',
-                              isSelected: _attachmentMode == 1,
-                              onTap: () => setState(() => _attachmentMode = 1),
-                            ),
-                          ],
                         ),
                       ],
                     ),
-                    const SizedBox(height: 8),
-
-                    // Chế độ 0: Đính kèm tệp PDF hoặc Word từ máy
-                    if (_attachmentMode == 0) ...[
-                      if (!hasAttachedFile) ...[
-                        // Khung chọn tệp phong cách Cashew
-                        InkWell(
-                          onTap: _pickDocumentFile,
-                          borderRadius: BorderRadius.circular(16),
-                          child: Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.symmetric(
-                              vertical: 20,
-                              horizontal: 16,
-                            ),
-                            decoration: BoxDecoration(
-                              color: AppTheme.surfaceVariant,
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(
-                                color: AppTheme.mintAccent.withOpacity(0.5),
-                                width: 1.5,
-                              ),
-                            ),
-                            child: Column(
-                              children: [
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Container(
-                                      padding: const EdgeInsets.all(8),
-                                      decoration: BoxDecoration(
-                                        color: const Color(0xFFFEE2E2),
-                                        borderRadius: BorderRadius.circular(10),
-                                      ),
-                                      child: const Icon(
-                                        Icons.picture_as_pdf_rounded,
-                                        color: Color(0xFFDC2626),
-                                        size: 26,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Container(
-                                      padding: const EdgeInsets.all(8),
-                                      decoration: BoxDecoration(
-                                        color: const Color(0xFFDBEAFE),
-                                        borderRadius: BorderRadius.circular(10),
-                                      ),
-                                      child: const Icon(
-                                        Icons.description_rounded,
-                                        color: Color(0xFF1D4ED8),
-                                        size: 26,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 12),
-                                const Text(
-                                  'Bấm để chọn tệp PDF hoặc Word từ máy',
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w700,
-                                    color: AppTheme.textPrimary,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                const Text(
-                                  'Hỗ trợ tệp: .pdf, .docx, .doc, .txt',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: AppTheme.textSecondary,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ] else ...[
-                        // Thẻ hiển thị tệp đã chọn
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color:
-                                FileHelper.getFileBgColor(_fileController.text),
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(
-                              color:
-                                  FileHelper.getFileColor(_fileController.text)
-                                      .withOpacity(0.4),
-                              width: 1.5,
-                            ),
-                          ),
-                          child: Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(10),
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Icon(
-                                  FileHelper.getFileIcon(_fileController.text),
-                                  color: FileHelper.getFileColor(
-                                      _fileController.text),
-                                  size: 28,
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      _pickedFileName ??
-                                          FileHelper.getFileName(
-                                              _fileController.text),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w700,
-                                        color: AppTheme.textPrimary,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 3),
-                                    Row(
-                                      children: [
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(
-                                              horizontal: 6, vertical: 1),
-                                          decoration: BoxDecoration(
-                                            color: FileHelper.getFileColor(
-                                                _fileController.text),
-                                            borderRadius:
-                                                BorderRadius.circular(4),
-                                          ),
-                                          child: Text(
-                                            FileHelper.getFileBadgeLabel(
-                                                _fileController.text),
-                                            style: const TextStyle(
-                                              fontSize: 10,
-                                              fontWeight: FontWeight.w700,
-                                              color: Colors.white,
-                                            ),
-                                          ),
-                                        ),
-                                        if (_pickedFileSize != null) ...[
-                                          const SizedBox(width: 6),
-                                          Text(
-                                            FileHelper.formatBytes(
-                                                _pickedFileSize!),
-                                            style: const TextStyle(
-                                              fontSize: 11,
-                                              color: AppTheme.textSecondary,
-                                            ),
-                                          ),
-                                        ],
-                                      ],
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              IconButton(
-                                icon: const Icon(Icons.sync_rounded,
-                                    color: AppTheme.primary),
-                                tooltip: 'Đổi tệp khác',
-                                onPressed: _pickDocumentFile,
-                              ),
-                              IconButton(
-                                icon: const Icon(Icons.close_rounded,
-                                    color: AppTheme.error),
-                                tooltip: 'Xóa tệp',
-                                onPressed: _clearSelectedFile,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ] else ...[
-                      // Chế độ 1: Nhập liên kết Web URL
-                      TextFormField(
-                        controller: _fileController,
-                        decoration: const InputDecoration(
-                          hintText: 'https://example.com/tai-lieu-hoc-tap',
-                          prefixIcon: Icon(Icons.link_rounded, size: 20),
+                    const SizedBox(height: 6),
+                    TextFormField(
+                      controller: _fileController,
+                      keyboardType: TextInputType.url,
+                      decoration: InputDecoration(
+                        hintText: 'https://drive.google.com/... hoặc link tài liệu',
+                        prefixIcon: const Icon(Icons.insert_link_rounded, size: 20),
+                        suffixIcon: ValueListenableBuilder<TextEditingValue>(
+                          valueListenable: _fileController,
+                          builder: (context, value, _) {
+                            if (value.text.isEmpty) return const SizedBox.shrink();
+                            return IconButton(
+                              icon: const Icon(Icons.clear_rounded, size: 18),
+                              tooltip: 'Xóa link',
+                              onPressed: () => _fileController.clear(),
+                            );
+                          },
                         ),
                       ),
-                    ],
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return 'Vui lòng nhập đường liên kết tài liệu (URL / Drive / Web)';
+                        }
+                        final trimmed = value.trim();
+                        final uri = Uri.tryParse(trimmed);
+                        final isValidUrl = uri != null &&
+                            (uri.isScheme('http') || uri.isScheme('https')) &&
+                            uri.hasAuthority;
+                        if (!isValidUrl) {
+                          return 'Đường link không hợp lệ (cần bắt đầu bằng http:// hoặc https://)';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: AppTheme.surfaceVariant,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: AppTheme.border.withOpacity(0.6),
+                        ),
+                      ),
+                      child: const Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Icon(Icons.info_outline_rounded, size: 15, color: AppTheme.primary),
+                          SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Dán link Google Drive, Docs, Dropbox, OneDrive hoặc PDF online. Đường link sẽ được lưu trực tiếp vào trường fileUrlOrPath trong Firestore và có thể bấm mở trực tiếp.',
+                              style: TextStyle(
+                                fontSize: 11.5,
+                                color: AppTheme.textSecondary,
+                                height: 1.35,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                     const SizedBox(height: 16),
 
-                    // Mô tả tóm tắt
+                    // 5. Mô tả / Ghi chú nội dung
                     const Text(
                       'Mô tả / Ghi chú nội dung',
                       style: TextStyle(
@@ -717,7 +455,7 @@ class _DocumentFormModalState extends State<DocumentFormModal> {
                     ),
                     const SizedBox(height: 16),
 
-                    // Thẻ Tags
+                    // 6. Thẻ Tags
                     const Text(
                       'Thẻ từ khóa (Tags)',
                       style: TextStyle(
@@ -757,8 +495,7 @@ class _DocumentFormModalState extends State<DocumentFormModal> {
                         runSpacing: 4,
                         children: _tags.map((t) {
                           return Chip(
-                            label:
-                                Text(t, style: const TextStyle(fontSize: 12)),
+                            label: Text(t, style: const TextStyle(fontSize: 12)),
                             deleteIcon: const Icon(Icons.close, size: 14),
                             onDeleted: () => _removeTag(t),
                             visualDensity: VisualDensity.compact,
@@ -768,7 +505,7 @@ class _DocumentFormModalState extends State<DocumentFormModal> {
                     ],
                     const SizedBox(height: 16),
 
-                    // Đánh dấu yêu thích
+                    // 7. Đánh dấu yêu thích
                     SwitchListTile(
                       contentPadding: EdgeInsets.zero,
                       title: const Text(
@@ -785,7 +522,7 @@ class _DocumentFormModalState extends State<DocumentFormModal> {
                     ),
                     const SizedBox(height: 20),
 
-                    // Nút Submit
+                    // 8. Nút Submit
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
@@ -811,56 +548,6 @@ class _DocumentFormModalState extends State<DocumentFormModal> {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-/// Nút chuyển đổi chế độ đính kèm (Tệp máy / Web link)
-class _ModeTabButton extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final bool isSelected;
-  final VoidCallback onTap;
-
-  const _ModeTabButton({
-    required this.icon,
-    required this.label,
-    required this.isSelected,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(10),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        decoration: BoxDecoration(
-          color: isSelected ? AppTheme.primary : AppTheme.surfaceVariant,
-          borderRadius: BorderRadius.circular(10),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              icon,
-              size: 14,
-              color: isSelected ? Colors.white : AppTheme.textSecondary,
-            ),
-            const SizedBox(width: 4),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 11.5,
-                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                color: isSelected ? Colors.white : AppTheme.textSecondary,
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }

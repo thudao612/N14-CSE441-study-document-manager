@@ -204,51 +204,80 @@ class DocumentCard extends StatelessWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Row(
-                    children: [
-                      const Icon(Icons.access_time_rounded, size: 13, color: AppTheme.textSecondary),
-                      const SizedBox(width: 4),
-                      Text(
-                        'Cập nhật: ${dateFormat.format(document.updatedAt)}',
-                        style: const TextStyle(
-                          fontSize: 11.5,
-                          color: AppTheme.textSecondary,
-                        ),
-                      ),
-                    ],
-                  ),
-                  if (document.hasFileOrLink)
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: FileHelper.getFileBgColor(document.fileUrlOrPath),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            FileHelper.getFileIcon(document.fileUrlOrPath),
-                            size: 13,
-                            color: FileHelper.getFileColor(document.fileUrlOrPath),
-                          ),
-                          const SizedBox(width: 4),
-                          ConstrainedBox(
-                            constraints: const BoxConstraints(maxWidth: 130),
-                            child: Text(
-                              FileHelper.isWebLink(document.fileUrlOrPath)
-                                  ? 'Liên kết web'
-                                  : document.fileName,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w700,
-                                color: FileHelper.getFileColor(document.fileUrlOrPath),
+                  Expanded(
+                    child: Wrap(
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      spacing: 8,
+                      children: [
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.access_time_rounded, size: 13, color: AppTheme.textSecondary),
+                            const SizedBox(width: 4),
+                            Text(
+                              'Cập nhật: ${dateFormat.format(document.updatedAt)}',
+                              style: const TextStyle(
+                                fontSize: 11.5,
+                                color: AppTheme.textSecondary,
                               ),
                             ),
+                          ],
+                        ),
+                        if (document.authorEmail.isNotEmpty)
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.person_outline_rounded, size: 13, color: AppTheme.primary),
+                              const SizedBox(width: 3),
+                              Text(
+                                document.authorEmail,
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w500,
+                                  color: AppTheme.primary,
+                                ),
+                              ),
+                            ],
                           ),
-                        ],
+                      ],
+                    ),
+                  ),
+                  if (document.hasFileOrLink)
+                    InkWell(
+                      onTap: () => FileHelper.openDocument(context, document.fileUrlOrPath),
+                      borderRadius: BorderRadius.circular(6),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: FileHelper.getFileBgColor(document.fileUrlOrPath),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              FileHelper.getFileIcon(document.fileUrlOrPath),
+                              size: 13,
+                              color: FileHelper.getFileColor(document.fileUrlOrPath),
+                            ),
+                            const SizedBox(width: 4),
+                            ConstrainedBox(
+                              constraints: const BoxConstraints(maxWidth: 130),
+                              child: Text(
+                                FileHelper.isWebLink(document.fileUrlOrPath)
+                                    ? 'Mở liên kết'
+                                    : document.fileName,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w700,
+                                  color: FileHelper.getFileColor(document.fileUrlOrPath),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                 ],

@@ -13,6 +13,8 @@ class DocumentModel {
   final bool isFavorite;
   final String createdAt;
   final String updatedAt;
+  final String userId;
+  final String authorEmail;
 
   const DocumentModel({
     required this.id,
@@ -25,9 +27,21 @@ class DocumentModel {
     required this.isFavorite,
     required this.createdAt,
     required this.updatedAt,
+    this.userId = '',
+    this.authorEmail = '',
   });
 
-  /// Chuyển đổi từ JSON Map sang Model
+  static String _parseDate(dynamic val) {
+    if (val == null) return DateTime.now().toIso8601String();
+    if (val is String && val.isNotEmpty) return val;
+    try {
+      final date = (val as dynamic).toDate();
+      if (date is DateTime) return date.toIso8601String();
+    } catch (_) {}
+    return DateTime.now().toIso8601String();
+  }
+
+  /// Chuyển đổi từ JSON Map sang Model (hỗ trợ cả Firestore Document data)
   factory DocumentModel.fromJson(Map<String, dynamic> json) {
     return DocumentModel(
       id: json['id'] as String? ?? '',
@@ -42,10 +56,11 @@ class DocumentModel {
               .toList() ??
           const [],
       isFavorite: json['isFavorite'] as bool? ?? false,
-      createdAt: json['createdAt'] as String? ??
-          DateTime.now().toIso8601String(),
-      updatedAt: json['updatedAt'] as String? ??
-          DateTime.now().toIso8601String(),
+      createdAt: _parseDate(json['createdAt']),
+      updatedAt: _parseDate(json['updatedAt']),
+      userId: json['userId'] as String? ?? '',
+      authorEmail: json['authorEmail'] as String? ??
+          (json['authorName'] as String? ?? ''),
     );
   }
 
@@ -62,6 +77,25 @@ class DocumentModel {
       'isFavorite': isFavorite,
       'createdAt': createdAt,
       'updatedAt': updatedAt,
+      'userId': userId,
+      'authorEmail': authorEmail,
+    };
+  }
+
+  /// Chuẩn hóa JSON lưu trữ trực tiếp trên Firestore (loại bỏ id vì id đã là Document ID)
+  Map<String, dynamic> toFirestoreJson() {
+    return {
+      'title': title,
+      'subject': subject,
+      'type': type,
+      'description': description,
+      'fileUrlOrPath': fileUrlOrPath,
+      'tags': tags,
+      'isFavorite': isFavorite,
+      'createdAt': createdAt,
+      'updatedAt': updatedAt,
+      'userId': userId,
+      'authorEmail': authorEmail,
     };
   }
 
@@ -78,6 +112,8 @@ class DocumentModel {
       isFavorite: entity.isFavorite,
       createdAt: entity.createdAt.toIso8601String(),
       updatedAt: entity.updatedAt.toIso8601String(),
+      userId: entity.userId,
+      authorEmail: entity.authorEmail,
     );
   }
 
@@ -94,6 +130,8 @@ class DocumentModel {
       isFavorite: isFavorite,
       createdAt: DateTime.tryParse(createdAt) ?? DateTime.now(),
       updatedAt: DateTime.tryParse(updatedAt) ?? DateTime.now(),
+      userId: userId,
+      authorEmail: authorEmail,
     );
   }
 }

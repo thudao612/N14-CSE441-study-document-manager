@@ -52,7 +52,7 @@ class AppTheme {
           letterSpacing: -0.3,
         ),
       ),
-      cardTheme: CardThemeData(
+      cardTheme: CardTheme(
         color: surface,
         elevation: 1,
         shadowColor: Colors.black.withOpacity(0.06),

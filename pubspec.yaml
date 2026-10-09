@@ -41,10 +41,11 @@ dependencies:
   file_picker: ^8.0.5
   open_filex: ^4.7.0
   url_launcher: ^6.3.1
-  firebase_core: ^4.15.0
-  cloud_firestore: ^6.10.0
-  firebase_storage: ^13.6.0
-  firebase_auth: ^6.7.0
+  firebase_core: ^2.30.0
+  cloud_firestore: ^4.17.0
+  firebase_auth: ^4.19.0
+  cloudinary_public: ^0.23.1
+  dio: ^5.4.0
 
 dev_dependencies:
   flutter_test:

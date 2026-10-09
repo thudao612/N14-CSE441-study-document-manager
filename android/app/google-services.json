@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "201021470810",
+    "project_id": "nhom14-mobile-app",
+    "storage_bucket": "nhom14-mobile-app.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:201021470810:android:ae7eaa6ecbf3fee5340063",
+        "android_client_info": {
+          "package_name": "com.studymanager.study_document_manager"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAIJztS8Jr98_PecZflssFDz8p3v6FPNgA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
