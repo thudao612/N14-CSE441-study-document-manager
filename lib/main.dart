@@ -1,10 +1,15 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import 'data/datasources/document_firestore_datasource.dart';
 import 'data/datasources/document_local_datasource.dart';
 import 'data/repositories/document_repository_impl.dart';
+import 'data/repositories/firebase_document_storage_repository.dart';
+import 'firebase_options.dart';
 import 'presentation/controllers/document_controller.dart';
 import 'presentation/screens/document_home_screen.dart';
+import 'presentation/screens/firebase_auth_gate.dart';
 import 'presentation/theme/app_theme.dart';
 import 'usecases/add_document_usecase.dart';
 import 'usecases/delete_document_usecase.dart';
@@ -12,25 +17,55 @@ import 'usecases/get_document_stats_usecase.dart';
 import 'usecases/get_documents_usecase.dart';
 import 'usecases/search_documents_usecase.dart';
 import 'usecases/update_document_usecase.dart';
+import 'usecases/upload_document_file_usecase.dart';
 
-void main() {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // 1. Khởi tạo Tầng Data (Data Source & Repository Implementation)
-  final localDataSource = DocumentLocalDataSourceImpl(autoSeed: true);
-  final documentRepository = DocumentRepositoryImpl(
-    localDataSource: localDataSource,
+  const useFirebase = bool.fromEnvironment(
+    'USE_FIREBASE',
+    defaultValue: false,
   );
 
-  // 2. Khởi tạo Tầng Use Cases (Business Logic / Interactors)
-  final addDocumentUseCase = AddDocumentUseCase(repository: documentRepository);
-  final updateDocumentUseCase = UpdateDocumentUseCase(repository: documentRepository);
-  final deleteDocumentUseCase = DeleteDocumentUseCase(repository: documentRepository);
-  final searchDocumentsUseCase = SearchDocumentsUseCase(repository: documentRepository);
-  final getDocumentsUseCase = GetDocumentsUseCase(repository: documentRepository);
-  final getDocumentStatsUseCase = GetDocumentStatsUseCase(repository: documentRepository);
+  if (useFirebase) {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+  }
 
-  // 3. Khởi tạo Tầng Presentation Controller với Dependency Injection
+  final DocumentLocalDataSource dataSource = useFirebase
+      ? DocumentFirestoreDataSource()
+      : DocumentLocalDataSourceImpl(autoSeed: true);
+
+  final documentRepository = DocumentRepositoryImpl(
+    localDataSource: dataSource,
+  );
+
+  final UploadDocumentFileUseCase? uploadDocumentFileUseCase = useFirebase
+      ? UploadDocumentFileUseCase(
+          repository: FirebaseDocumentStorageRepository(),
+        )
+      : null;
+
+  final addDocumentUseCase = AddDocumentUseCase(
+    repository: documentRepository,
+  );
+  final updateDocumentUseCase = UpdateDocumentUseCase(
+    repository: documentRepository,
+  );
+  final deleteDocumentUseCase = DeleteDocumentUseCase(
+    repository: documentRepository,
+  );
+  final searchDocumentsUseCase = SearchDocumentsUseCase(
+    repository: documentRepository,
+  );
+  final getDocumentsUseCase = GetDocumentsUseCase(
+    repository: documentRepository,
+  );
+  final getDocumentStatsUseCase = GetDocumentStatsUseCase(
+    repository: documentRepository,
+  );
+
   final documentController = DocumentController(
     addDocumentUseCase: addDocumentUseCase,
     updateDocumentUseCase: updateDocumentUseCase,
@@ -38,7 +73,14 @@ void main() {
     searchDocumentsUseCase: searchDocumentsUseCase,
     getDocumentsUseCase: getDocumentsUseCase,
     getDocumentStatsUseCase: getDocumentStatsUseCase,
-  )..init();
+    uploadDocumentFileUseCase: uploadDocumentFileUseCase,
+  );
+
+  // Nạp dữ liệu sớm ở chế độ local.
+  // Khi sử dụng Firebase, FirebaseAuthGate sẽ nạp sau khi đăng nhập.
+  if (!useFirebase) {
+    await documentController.init();
+  }
 
   runApp(
     MultiProvider(
@@ -47,21 +89,32 @@ void main() {
           value: documentController,
         ),
       ],
-      child: const StudyDocumentManagerApp(),
+      child: StudyDocumentManagerApp(
+        useFirebase: useFirebase,
+      ),
     ),
   );
 }
 
 class StudyDocumentManagerApp extends StatelessWidget {
-  const StudyDocumentManagerApp({super.key});
+  final bool useFirebase;
+
+  const StudyDocumentManagerApp({
+    super.key,
+    this.useFirebase = false,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final controller = context.read<DocumentController>();
+
     return MaterialApp(
       title: 'Quản lý Tài liệu Học tập',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
-      home: const DocumentHomeScreen(),
+      home: useFirebase
+          ? FirebaseAuthGate(controller: controller)
+          : const DocumentHomeScreen(),
     );
   }
 }

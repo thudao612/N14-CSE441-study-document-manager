@@ -58,6 +58,7 @@ class _DocumentFormModalState extends State<DocumentFormModal> {
   int _attachmentMode = 0;
   String? _pickedFileName;
   int? _pickedFileSize;
+  Uint8List? _pickedFileBytes;
 
   bool get isEditing => widget.initialDocument != null;
 
@@ -108,6 +109,18 @@ class _DocumentFormModalState extends State<DocumentFormModal> {
 
       if (result != null && result.files.isNotEmpty) {
         final platformFile = result.files.first;
+        final bytes = platformFile.bytes;
+
+        if (bytes == null || bytes.isEmpty) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Không đọc được nội dung tệp đã chọn.'),
+              ),
+            );
+          }
+          return;
+        }
         final path =
             kIsWeb ? platformFile.name : platformFile.path ?? platformFile.name;
 
@@ -115,6 +128,8 @@ class _DocumentFormModalState extends State<DocumentFormModal> {
           _fileController.text = path;
           _pickedFileName = platformFile.name;
           _pickedFileSize = platformFile.size;
+          _pickedFileBytes = bytes;
+          _pickedFileBytes = platformFile.bytes;
 
           // Gợi ý tiêu đề tài liệu tự động từ tên tệp nếu người dùng chưa nhập
           if (_titleController.text.trim().isEmpty) {
@@ -143,6 +158,7 @@ class _DocumentFormModalState extends State<DocumentFormModal> {
       _fileController.clear();
       _pickedFileName = null;
       _pickedFileSize = null;
+      _pickedFileBytes = null;
     });
   }
 
@@ -170,6 +186,44 @@ class _DocumentFormModalState extends State<DocumentFormModal> {
       _addTag(_tagInputController.text);
     }
 
+    var attachmentUrl = _fileController.text.trim();
+
+    final bytes = _pickedFileBytes;
+
+    if (bytes != null && widget.controller.canUploadDocumentFile) {
+      final fileName = _pickedFileName;
+
+      if (fileName == null || fileName.trim().isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Tên tệp không hợp lệ.'),
+          ),
+        );
+        return;
+      }
+
+      try {
+        attachmentUrl = await widget.controller.uploadDocumentFile(
+          fileName: fileName,
+          bytes: bytes,
+        );
+
+        if (!mounted) return;
+
+        _fileController.text = attachmentUrl;
+        _pickedFileBytes = null;
+      } catch (e) {
+        if (!mounted) return;
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Không thể tải tệp lên: $e'),
+            backgroundColor: AppTheme.error,
+          ),
+        );
+        return;
+      }
+    }
     bool success;
     if (isEditing) {
       final params = UpdateDocumentParams(
@@ -178,7 +232,7 @@ class _DocumentFormModalState extends State<DocumentFormModal> {
         subject: _subjectController.text,
         type: _selectedType,
         description: _descController.text,
-        fileUrlOrPath: _fileController.text,
+        fileUrlOrPath: attachmentUrl,
         tags: _tags,
         isFavorite: _isFavorite,
       );
@@ -189,7 +243,7 @@ class _DocumentFormModalState extends State<DocumentFormModal> {
         subject: _subjectController.text,
         type: _selectedType,
         description: _descController.text,
-        fileUrlOrPath: _fileController.text,
+        fileUrlOrPath: attachmentUrl,
         tags: _tags,
         isFavorite: _isFavorite,
       );

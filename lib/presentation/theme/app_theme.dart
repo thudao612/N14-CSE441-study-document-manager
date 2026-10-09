@@ -4,23 +4,25 @@ import 'package:flutter/material.dart';
 /// Tối ưu thẩm mỹ với màu sắc hài hòa, góc bo cong mềm mại và bố cục phân lớp hiện đại
 class AppTheme {
   // Bảng màu nhận diện chính (Cashew Palette kết hợp Xanh Mint Pastel)
-  static const Color primary = Color(0xFF3F51B5);       // Indigo chính
+  static const Color primary = Color(0xFF3F51B5); // Indigo chính
   static const Color primaryDark = Color(0xFF303F9F);
   static const Color primaryLight = Color(0xFFE8EAF6);
-  
-  static const Color secondary = Color(0xFF00897B);     // Teal ngọc bích
-  static const Color mintAccent = Color(0xFF10B981);    // Xanh Mint tươi
-  static const Color accent = Color(0xFFF59E0B);        // Hổ phách (Amber)
-  static const Color error = Color(0xFFE11D48);         // Đỏ hồng (Rose red)
-  
+
+  static const Color secondary = Color(0xFF00897B); // Teal ngọc bích
+  static const Color mintAccent = Color(0xFF10B981); // Xanh Mint tươi
+  static const Color accent = Color(0xFFF59E0B); // Hổ phách (Amber)
+  static const Color error = Color(0xFFE11D48); // Đỏ hồng (Rose red)
+
   // Màu nền xanh mint pastel nhạt dịu mắt, làm nổi bật các thẻ trắng
-  static const Color background = Color(0xFFEAF6F0);    // Xanh mint pastel
-  static const Color surface = Color(0xFFFFFFFF);       // Mặt thẻ Card trắng tinh khôi
+  static const Color background = Color(0xFFEAF6F0); // Xanh mint pastel
+  static const Color surface =
+      Color(0xFFFFFFFF); // Mặt thẻ Card trắng tinh khôi
   static const Color surfaceVariant = Color(0xFFDEF2E8); // Xanh mint siêu nhạt
-  
-  static const Color textPrimary = Color(0xFF0F291E);   // Chữ đậm sắc nét
-  static const Color textSecondary = Color(0xFF52796F); // Chữ phụ xanh rêu thanh lịch
-  static const Color border = Color(0xFFCCEBD9);        // Viền mint pastel nhẹ
+
+  static const Color textPrimary = Color(0xFF0F291E); // Chữ đậm sắc nét
+  static const Color textSecondary =
+      Color(0xFF52796F); // Chữ phụ xanh rêu thanh lịch
+  static const Color border = Color(0xFFCCEBD9); // Viền mint pastel nhẹ
 
   /// Theme sáng (Light Theme)
   static ThemeData get lightTheme {
@@ -50,7 +52,7 @@ class AppTheme {
           letterSpacing: -0.3,
         ),
       ),
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         color: surface,
         elevation: 1,
         shadowColor: Colors.black.withOpacity(0.06),
@@ -63,7 +65,8 @@ class AppTheme {
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: surfaceVariant,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
           borderSide: BorderSide.none,
