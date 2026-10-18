@@ -1,0 +1,31 @@
+rules_version = '2';
+
+// Quy tắc bảo mật Firebase Storage cho Ứng dụng Quản lý Tài liệu Học tập
+// Tích hợp cùng Supabase Database và Firebase Authentication
+service firebase.storage {
+  match /b/{bucket}/o {
+    
+    // Thư mục lưu trữ tài liệu: documents/{userId}/{allPaths=**}
+    match /documents/{userId}/{allPaths=**} {
+      
+      // Cho phép đọc: Người dùng đã đăng nhập Firebase Auth
+      allow read: if request.auth != null;
+
+      // Cho phép tải lên: Chỉ chính chủ (request.auth.uid == userId)
+      // Giới hạn kích thước tệp tối đa 50MB
+      allow write: if request.auth != null 
+                   && request.auth.uid == userId
+                   && request.resource.size < 50 * 1024 * 1024;
+
+      // Cho phép xóa: Chỉ chính chủ mới có thể xóa tệp của mình khỏi Storage
+      allow delete: if request.auth != null 
+                    && request.auth.uid == userId;
+    }
+
+    // Mặc định từ chối mọi truy cập trái phép khác
+    match /{allPaths=**} {
+      allow read: if request.auth != null;
+      allow write, delete: if false;
+    }
+  }
+}

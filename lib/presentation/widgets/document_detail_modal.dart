@@ -6,6 +6,7 @@ import '../controllers/document_controller.dart';
 import '../theme/app_theme.dart';
 import '../utils/file_helper.dart';
 import 'document_form_modal.dart';
+import 'share_document_dialog.dart';
 
 /// Modal xem chi tiết tài liệu học tập
 class DocumentDetailModal extends StatelessWidget {
@@ -123,6 +124,41 @@ class DocumentDetailModal extends StatelessWidget {
                         ),
                       ),
                     ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: document.isOwner
+                        ? const Color(0xFFFFF3E0)
+                        : (document.userRole == 'editor'
+                            ? const Color(0xFFE0F2F1)
+                            : const Color(0xFFEDE7F6)),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: document.isOwner
+                          ? const Color(0xFFFFB74D)
+                          : (document.userRole == 'editor'
+                              ? const Color(0xFF80CBC4)
+                              : const Color(0xFFB39DDB)),
+                    ),
+                  ),
+                  child: Text(
+                    document.isOwner
+                        ? '👑 Chủ sở hữu'
+                        : (document.userRole == 'editor'
+                            ? '✏️ Biên tập'
+                            : '👁️ Chỉ xem'),
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w700,
+                      color: document.isOwner
+                          ? const Color(0xFFE65100)
+                          : (document.userRole == 'editor'
+                              ? const Color(0xFF00695C)
+                              : const Color(0xFF4527A0)),
+                    ),
                   ),
                 ),
                 const Spacer(),
@@ -297,35 +333,64 @@ class DocumentDetailModal extends StatelessWidget {
                             ],
                           ),
                           const SizedBox(height: 12),
-                          // Nút Mở tệp / Xem tài liệu trực tiếp
-                          SizedBox(
-                            width: double.infinity,
-                            child: ElevatedButton.icon(
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: FileHelper.getFileColor(document.fileUrlOrPath),
-                                foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(vertical: 12),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
+                          // Nút Mở tệp / Xem tài liệu trực tiếp & Tải về máy
+                          Row(
+                            children: [
+                              Expanded(
+                                child: ElevatedButton.icon(
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: FileHelper.getFileColor(document.fileUrlOrPath),
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(vertical: 12),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                  ),
+                                  icon: Icon(
+                                    FileHelper.isWebLink(document.fileUrlOrPath)
+                                        ? Icons.open_in_new_rounded
+                                        : Icons.file_open_rounded,
+                                    size: 18,
+                                  ),
+                                  label: Text(
+                                    FileHelper.isWebLink(document.fileUrlOrPath)
+                                        ? 'Mở xem tệp'
+                                        : 'Mở tệp',
+                                    style: const TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                  onPressed: () => FileHelper.openDocument(context, document.fileUrlOrPath),
                                 ),
                               ),
-                              icon: Icon(
-                                FileHelper.isWebLink(document.fileUrlOrPath)
-                                    ? Icons.open_in_new_rounded
-                                    : Icons.file_open_rounded,
-                                size: 18,
-                              ),
-                              label: Text(
-                                FileHelper.isWebLink(document.fileUrlOrPath)
-                                    ? 'Mở liên kết Web'
-                                    : 'Mở tệp xem nội dung',
-                                style: const TextStyle(
-                                  fontSize: 13.5,
-                                  fontWeight: FontWeight.w700,
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: OutlinedButton.icon(
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: FileHelper.getFileColor(document.fileUrlOrPath),
+                                    side: BorderSide(color: FileHelper.getFileColor(document.fileUrlOrPath)),
+                                    padding: const EdgeInsets.symmetric(vertical: 12),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                  ),
+                                  icon: const Icon(Icons.download_rounded, size: 18),
+                                  label: const Text(
+                                    'Tải về máy',
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                  onPressed: () => FileHelper.downloadDocument(
+                                    context,
+                                    document.fileUrlOrPath,
+                                    customFileName: document.title,
+                                  ),
                                 ),
                               ),
-                              onPressed: () => FileHelper.openDocument(context, document.fileUrlOrPath),
-                            ),
+                            ],
                           ),
                         ],
                       ),
@@ -389,48 +454,119 @@ class DocumentDetailModal extends StatelessWidget {
                   ),
                   const SizedBox(height: 24),
 
-                  // Bottom Action Buttons: Sửa & Xóa
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: AppTheme.error,
-                            side: const BorderSide(color: AppTheme.error),
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(14),
+                  // Bottom Action Buttons theo vai trò người dùng (Owner / Editor / Viewer)
+                  if (document.isOwner) ...[
+                    Row(
+                      children: [
+                        if (controller.canManagePermissions) ...[
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: AppTheme.primary,
+                                side: const BorderSide(color: AppTheme.primary),
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                              ),
+                              icon: const Icon(Icons.share_outlined, size: 18),
+                              label: const Text('Chia sẻ'),
+                              onPressed: () {
+                                ShareDocumentDialog.show(
+                                  context,
+                                  document: document,
+                                  controller: controller,
+                                );
+                              },
                             ),
                           ),
-                          icon: const Icon(Icons.delete_outline_rounded, size: 18),
-                          label: const Text('Xóa tài liệu'),
-                          onPressed: () => _confirmDelete(context),
+                          const SizedBox(width: 8),
+                        ],
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: AppTheme.error,
+                              side: const BorderSide(color: AppTheme.error),
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                            ),
+                            icon: const Icon(Icons.delete_outline_rounded, size: 18),
+                            label: const Text('Xóa'),
+                            onPressed: () => _confirmDelete(context),
+                          ),
                         ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppTheme.primary,
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                            ),
+                            icon: const Icon(Icons.edit_rounded, size: 18),
+                            label: const Text('Sửa'),
+                            onPressed: () {
+                              Navigator.pop(context); // Đóng detail sheet
+                              DocumentFormModal.show(
+                                context,
+                                controller: controller,
+                                document: document,
+                              );
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                  ] else if (document.canEdit) ...[
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppTheme.primary,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                        ),
+                        icon: const Icon(Icons.edit_rounded, size: 18),
+                        label: const Text('Chỉnh sửa thông tin (Editor)'),
+                        onPressed: () {
+                          Navigator.pop(context);
+                          DocumentFormModal.show(
+                            context,
+                            controller: controller,
+                            document: document,
+                          );
+                        },
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: ElevatedButton.icon(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppTheme.primary,
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(14),
+                    ),
+                  ] else ...[
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: AppTheme.surfaceVariant,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: AppTheme.border),
+                      ),
+                      child: const Row(
+                        children: [
+                          Icon(Icons.lock_outline_rounded, size: 18, color: AppTheme.textSecondary),
+                          SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              'Bạn có quyền Chỉ xem (Viewer). Chức năng chỉnh sửa và xóa bị vô hiệu hóa.',
+                              style: TextStyle(fontSize: 12.5, color: AppTheme.textSecondary),
                             ),
                           ),
-                          icon: const Icon(Icons.edit_rounded, size: 18),
-                          label: const Text('Chỉnh sửa'),
-                          onPressed: () {
-                            Navigator.pop(context); // Đóng detail sheet
-                            DocumentFormModal.show(
-                              context,
-                              controller: controller,
-                              document: document,
-                            );
-                          },
-                        ),
+                        ],
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ],
               ),
             ),

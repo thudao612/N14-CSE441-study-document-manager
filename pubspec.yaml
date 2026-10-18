@@ -44,6 +44,8 @@ dependencies:
   firebase_core: ^2.30.0
   cloud_firestore: ^4.17.0
   firebase_auth: ^4.19.0
+  firebase_storage: ^11.7.0
+  supabase_flutter: ^2.5.0
   cloudinary_public: ^0.23.1
   dio: ^5.4.0
 

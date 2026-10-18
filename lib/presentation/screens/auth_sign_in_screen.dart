@@ -1,7 +1,9 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' hide User;
 
+import '../../core/config/supabase_config.dart';
 import '../theme/app_theme.dart';
 
 /// Màn hình Đăng nhập tích hợp Firebase Authentication
@@ -52,6 +54,26 @@ class _AuthSignInScreenState extends State<AuthSignInScreen> {
     };
   }
 
+  Future<void> _syncUserToSupabase(User? user) async {
+    if (user == null) return;
+    try {
+      if (SupabaseConfig.isConfigured) {
+        final email = user.email ?? '${user.uid}@user.app';
+        final displayName = user.displayName ?? email.split('@').first;
+        await Supabase.instance.client.from('users').upsert({
+          'id': user.uid,
+          'email': email.trim().toLowerCase(),
+          'display_name': displayName,
+          'photo_url': user.photoURL ?? '',
+          'updated_at': DateTime.now().toIso8601String(),
+        }, onConflict: 'id');
+        debugPrint('Synced user profile to Supabase users table: $email (${user.uid})');
+      }
+    } catch (e) {
+      debugPrint('Sync user to Supabase notice: $e');
+    }
+  }
+
   /// 1. Đăng nhập / Đăng ký qua Email & Password
   Future<void> _submitEmailPassword() async {
     if (!_formKey.currentState!.validate()) return;
@@ -61,17 +83,19 @@ class _AuthSignInScreenState extends State<AuthSignInScreen> {
       final email = _emailController.text.trim();
       final password = _passwordController.text;
 
+      UserCredential credential;
       if (_isSignUp) {
-        await FirebaseAuth.instance.createUserWithEmailAndPassword(
+        credential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
           email: email,
           password: password,
         );
       } else {
-        await FirebaseAuth.instance.signInWithEmailAndPassword(
+        credential = await FirebaseAuth.instance.signInWithEmailAndPassword(
           email: email,
           password: password,
         );
       }
+      await _syncUserToSupabase(credential.user);
     } on FirebaseAuthException catch (e) {
       if (mounted) setState(() => _errorMessage = _mapFirebaseError(e));
     } catch (e) {
@@ -90,11 +114,13 @@ class _AuthSignInScreenState extends State<AuthSignInScreen> {
       provider.addScope('email');
       provider.addScope('profile');
 
+      UserCredential credential;
       if (kIsWeb) {
-        await FirebaseAuth.instance.signInWithPopup(provider);
+        credential = await FirebaseAuth.instance.signInWithPopup(provider);
       } else {
-        await FirebaseAuth.instance.signInWithProvider(provider);
+        credential = await FirebaseAuth.instance.signInWithProvider(provider);
       }
+      await _syncUserToSupabase(credential.user);
     } on FirebaseAuthException catch (e) {
       if (mounted) setState(() => _errorMessage = _mapFirebaseError(e));
     } catch (e) {
@@ -109,7 +135,8 @@ class _AuthSignInScreenState extends State<AuthSignInScreen> {
     _setLoading(true);
 
     try {
-      await FirebaseAuth.instance.signInAnonymously();
+      final credential = await FirebaseAuth.instance.signInAnonymously();
+      await _syncUserToSupabase(credential.user);
     } on FirebaseAuthException catch (e) {
       if (mounted) setState(() => _errorMessage = _mapFirebaseError(e));
     } catch (e) {
@@ -125,11 +152,13 @@ class _AuthSignInScreenState extends State<AuthSignInScreen> {
 
     try {
       final provider = GithubAuthProvider();
+      UserCredential credential;
       if (kIsWeb) {
-        await FirebaseAuth.instance.signInWithPopup(provider);
+        credential = await FirebaseAuth.instance.signInWithPopup(provider);
       } else {
-        await FirebaseAuth.instance.signInWithProvider(provider);
+        credential = await FirebaseAuth.instance.signInWithProvider(provider);
       }
+      await _syncUserToSupabase(credential.user);
     } on FirebaseAuthException catch (e) {
       if (mounted) setState(() => _errorMessage = _mapFirebaseError(e));
     } catch (e) {

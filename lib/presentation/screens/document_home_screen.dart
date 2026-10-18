@@ -180,6 +180,15 @@ class DocumentHomeScreen extends StatelessWidget {
                                     color: AppTheme.textSecondary,
                                   ),
                                 ),
+                              const SizedBox(height: 2),
+                              Text(
+                                'UID: ${user.uid}',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontFamily: 'monospace',
+                                  color: AppTheme.textSecondary.withOpacity(0.8),
+                                ),
+                              ),
                             ],
                           ),
                         ),

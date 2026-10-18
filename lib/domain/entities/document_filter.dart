@@ -29,6 +29,41 @@ class DocumentFilter {
       (tag != null && tag!.trim().isNotEmpty) ||
       isFavoriteOnly;
 
+  /// Kiểm tra xem một Document có thỏa mãn các tiêu chí lọc hay không
+  bool matches(dynamic doc) {
+    if (type != null && doc.type != type) return false;
+    if (isFavoriteOnly && !doc.isFavorite) return false;
+    if (subject != null && subject!.trim().isNotEmpty) {
+      if (doc.subject.toString().toLowerCase().trim() !=
+          subject!.toLowerCase().trim()) {
+        return false;
+      }
+    }
+    if (tag != null && tag!.trim().isNotEmpty) {
+      final targetTag = tag!.toLowerCase().trim();
+      final tags = doc.tags as List<dynamic>? ?? [];
+      final hasTag = tags.any((t) => t.toString().toLowerCase() == targetTag);
+      if (!hasTag) return false;
+    }
+    if (searchQuery != null && searchQuery!.trim().isNotEmpty) {
+      final query = searchQuery!.toLowerCase().trim();
+      final titleMatch =
+          doc.title.toString().toLowerCase().contains(query);
+      final subjectMatch =
+          doc.subject.toString().toLowerCase().contains(query);
+      final descMatch =
+          doc.description.toString().toLowerCase().contains(query);
+      final tags = doc.tags as List<dynamic>? ?? [];
+      final tagMatch =
+          tags.any((t) => t.toString().toLowerCase().contains(query));
+
+      if (!titleMatch && !subjectMatch && !descMatch && !tagMatch) {
+        return false;
+      }
+    }
+    return true;
+  }
+
   DocumentFilter copyWith({
     String? searchQuery,
     DocumentType? type,

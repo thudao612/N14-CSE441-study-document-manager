@@ -14,6 +14,9 @@ class Document {
   final DateTime updatedAt;
   final String userId;
   final String authorEmail;
+  final String userRole; // 'owner' | 'editor' | 'viewer'
+  final String rawFileName;
+  final int fileSize;
 
   const Document({
     required this.id,
@@ -28,6 +31,9 @@ class Document {
     required this.updatedAt,
     this.userId = '',
     this.authorEmail = '',
+    this.userRole = 'owner',
+    this.rawFileName = '',
+    this.fileSize = 0,
   });
 
   /// Tạo bản sao với các thuộc tính được cập nhật (Immutability pattern)
@@ -44,6 +50,9 @@ class Document {
     DateTime? updatedAt,
     String? userId,
     String? authorEmail,
+    String? userRole,
+    String? rawFileName,
+    int? fileSize,
   }) {
     return Document(
       id: id ?? this.id,
@@ -58,8 +67,17 @@ class Document {
       updatedAt: updatedAt ?? this.updatedAt,
       userId: userId ?? this.userId,
       authorEmail: authorEmail ?? this.authorEmail,
+      userRole: userRole ?? this.userRole,
+      rawFileName: rawFileName ?? this.rawFileName,
+      fileSize: fileSize ?? this.fileSize,
     );
   }
+
+  /// Tiện ích kiểm tra quyền truy cập của người dùng hiện tại
+  bool get isOwner => userRole == 'owner';
+  bool get canEdit => userRole == 'owner' || userRole == 'editor';
+  bool get isShared => userRole != 'owner';
+  bool get isViewer => userRole == 'viewer';
 
   /// Tiện ích nhận diện định dạng tệp đính kèm
   bool get hasFileOrLink => fileUrlOrPath.trim().isNotEmpty;
@@ -77,6 +95,7 @@ class Document {
   }
 
   String get fileName {
+    if (rawFileName.trim().isNotEmpty) return rawFileName.trim();
     final trimmed = fileUrlOrPath.trim();
     if (trimmed.isEmpty) return '';
     if (isWebLink) return trimmed;

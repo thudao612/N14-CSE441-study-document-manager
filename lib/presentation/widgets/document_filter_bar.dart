@@ -22,8 +22,47 @@ class DocumentFilterBar extends StatelessWidget {
           // Nút "Tất cả"
           _FilterChipItem(
             label: 'Tất cả (${stats.totalCount})',
-            isSelected: filter.type == null && !filter.isFavoriteOnly && filter.subject == null && filter.tag == null,
-            onTap: () => controller.resetFilter(),
+            isSelected: controller.sourceFilter == 'all' &&
+                filter.type == null &&
+                !filter.isFavoriteOnly &&
+                filter.subject == null &&
+                filter.tag == null,
+            onTap: () {
+              controller.setSourceFilter('all');
+              controller.resetFilter();
+            },
+          ),
+          const SizedBox(width: 8),
+
+          // Lọc "Của tôi" (Chủ sở hữu)
+          _FilterChipItem(
+            label: 'Của tôi',
+            icon: Icons.workspace_premium_rounded,
+            iconColor: const Color(0xFFE65100),
+            isSelected: controller.sourceFilter == 'mine',
+            onTap: () {
+              if (controller.sourceFilter == 'mine') {
+                controller.setSourceFilter('all');
+              } else {
+                controller.setSourceFilter('mine');
+              }
+            },
+          ),
+          const SizedBox(width: 8),
+
+          // Lọc "Được chia sẻ"
+          _FilterChipItem(
+            label: 'Được chia sẻ',
+            icon: Icons.people_outline_rounded,
+            iconColor: AppTheme.primary,
+            isSelected: controller.sourceFilter == 'shared',
+            onTap: () {
+              if (controller.sourceFilter == 'shared') {
+                controller.setSourceFilter('all');
+              } else {
+                controller.setSourceFilter('shared');
+              }
+            },
           ),
           const SizedBox(width: 8),
 

@@ -1,3 +1,4 @@
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import '../../domain/entities/document.dart';
 import '../../domain/entities/document_type.dart';
@@ -51,6 +52,7 @@ class _DocumentFormModalState extends State<DocumentFormModal> {
   late DocumentType _selectedType;
   late bool _isFavorite;
   late List<String> _tags;
+  int _selectedUploadMethod = 0; // 0 = Dán liên kết (nhanh - 0s), 1 = Chọn tệp từ thiết bị
 
   bool get isEditing => widget.initialDocument != null;
 
@@ -68,6 +70,12 @@ class _DocumentFormModalState extends State<DocumentFormModal> {
     _selectedType = doc?.type ?? DocumentType.lecture;
     _isFavorite = doc?.isFavorite ?? false;
     _tags = List<String>.from(doc?.tags ?? []);
+
+    if (doc != null && doc.fileUrlOrPath.contains('/storage/v1/object/')) {
+      _selectedUploadMethod = 1;
+    } else {
+      _selectedUploadMethod = 0;
+    }
   }
 
   @override
@@ -94,6 +102,77 @@ class _DocumentFormModalState extends State<DocumentFormModal> {
     setState(() {
       _tags.remove(tag);
     });
+  }
+
+  bool _isUploading = false;
+
+  Future<void> _pickAndUploadFile() async {
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['pdf', 'doc', 'docx', 'txt', 'png', 'jpg', 'jpeg'],
+        withData: true,
+      );
+
+      if (result == null || result.files.isEmpty) return;
+
+      final file = result.files.first;
+      final bytes = file.bytes;
+
+      if (bytes == null || bytes.isEmpty) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Không thể đọc dữ liệu tệp được chọn.'),
+              backgroundColor: AppTheme.error,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+        return;
+      }
+
+      setState(() => _isUploading = true);
+
+      final downloadUrl = await widget.controller.uploadDocumentFile(
+        fileName: file.name,
+        bytes: bytes,
+      );
+
+      if (mounted) {
+        setState(() {
+          _fileController.text = downloadUrl;
+          if (_titleController.text.trim().isEmpty) {
+            final rawName = file.name;
+            final dotIndex = rawName.lastIndexOf('.');
+            _titleController.text =
+                dotIndex > 0 ? rawName.substring(0, dotIndex) : rawName;
+          }
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Đã tải lên tệp: ${file.name} thành công!'),
+            backgroundColor: AppTheme.secondary,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Lỗi tải tệp: $e'),
+            backgroundColor: AppTheme.error,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isUploading = false);
+      }
+    }
   }
 
   Future<void> _submit() async {
@@ -162,16 +241,16 @@ class _DocumentFormModalState extends State<DocumentFormModal> {
   Widget build(BuildContext context) {
     final keyboardPadding = MediaQuery.of(context).viewInsets.bottom;
 
-    return Container(
-      constraints: BoxConstraints(
-        maxHeight: MediaQuery.of(context).size.height * 0.9,
-      ),
-      padding: EdgeInsets.only(bottom: keyboardPadding),
-      decoration: const BoxDecoration(
-        color: AppTheme.surface,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-      ),
-      child: Column(
+    return Material(
+      color: AppTheme.surface,
+      borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+      clipBehavior: Clip.antiAlias,
+      child: Container(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(context).size.height * 0.9,
+        ),
+        padding: EdgeInsets.only(bottom: keyboardPadding),
+        child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           // Handle kéo
@@ -372,12 +451,152 @@ class _DocumentFormModalState extends State<DocumentFormModal> {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: 8),
+
+                    // Lựa chọn phương thức: Dán link nhanh (0s) HOẶC Chọn tệp tải lên
+                    Container(
+                      padding: const EdgeInsets.all(3),
+                      decoration: BoxDecoration(
+                        color: AppTheme.surfaceVariant,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: AppTheme.border),
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: InkWell(
+                              onTap: () {
+                                setState(() => _selectedUploadMethod = 0);
+                              },
+                              borderRadius: BorderRadius.circular(8),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(vertical: 8),
+                                decoration: BoxDecoration(
+                                  color: _selectedUploadMethod == 0
+                                      ? AppTheme.primary
+                                      : Colors.transparent,
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      Icons.bolt_rounded,
+                                      size: 16,
+                                      color: _selectedUploadMethod == 0
+                                          ? Colors.white
+                                          : AppTheme.textSecondary,
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      'Dán link (Nhanh - 0s)',
+                                      style: TextStyle(
+                                        fontSize: 12.5,
+                                        fontWeight: FontWeight.w600,
+                                        color: _selectedUploadMethod == 0
+                                            ? Colors.white
+                                            : AppTheme.textSecondary,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                          if (widget.controller.canUploadDocumentFile)
+                            Expanded(
+                              child: InkWell(
+                                onTap: () {
+                                  setState(() => _selectedUploadMethod = 1);
+                                },
+                                borderRadius: BorderRadius.circular(8),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(vertical: 8),
+                                  decoration: BoxDecoration(
+                                    color: _selectedUploadMethod == 1
+                                        ? AppTheme.primary
+                                        : Colors.transparent,
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(
+                                        Icons.upload_file_rounded,
+                                        size: 16,
+                                        color: _selectedUploadMethod == 1
+                                            ? Colors.white
+                                            : AppTheme.textSecondary,
+                                      ),
+                                      const SizedBox(width: 6),
+                                      Text(
+                                        'Chọn tệp từ máy',
+                                        style: TextStyle(
+                                          fontSize: 12.5,
+                                          fontWeight: FontWeight.w600,
+                                          color: _selectedUploadMethod == 1
+                                              ? Colors.white
+                                              : AppTheme.textSecondary,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+
+                    // Khi chọn chế độ "Chọn tệp từ máy", hiển thị nút upload và trạng thái tiến trình
+                    if (_selectedUploadMethod == 1 && widget.controller.canUploadDocumentFile) ...[
+                      SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton.icon(
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: AppTheme.primary,
+                            side: const BorderSide(color: AppTheme.primary, width: 1.5),
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          icon: _isUploading
+                              ? const SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                )
+                              : const Icon(Icons.cloud_upload_outlined, size: 18),
+                          label: Text(
+                            _isUploading
+                                ? 'Đang tải tệp lên Supabase Storage...'
+                                : 'Bấm để chọn tệp từ máy tính (Tải lên Supabase)',
+                            style: const TextStyle(fontWeight: FontWeight.w600),
+                          ),
+                          onPressed: _isUploading ? null : _pickAndUploadFile,
+                        ),
+                      ),
+                      if (_isUploading) ...[
+                        const SizedBox(height: 8),
+                        const LinearProgressIndicator(),
+                        const SizedBox(height: 4),
+                        const Text(
+                          'Đang tải lên Supabase Storage... Vui lòng đợi trong giây lát.',
+                          style: TextStyle(fontSize: 11.5, color: AppTheme.textSecondary),
+                        ),
+                      ],
+                      const SizedBox(height: 8),
+                    ],
+
                     TextFormField(
                       controller: _fileController,
                       keyboardType: TextInputType.url,
                       decoration: InputDecoration(
-                        hintText: 'https://drive.google.com/... hoặc link tài liệu',
+                        hintText: _selectedUploadMethod == 0
+                            ? 'https://drive.google.com/... hoặc link tài liệu'
+                            : 'Đường link tệp (tự động điền sau khi tải lên)',
                         prefixIcon: const Icon(Icons.insert_link_rounded, size: 20),
                         suffixIcon: ValueListenableBuilder<TextEditingValue>(
                           valueListenable: _fileController,
@@ -416,15 +635,23 @@ class _DocumentFormModalState extends State<DocumentFormModal> {
                           color: AppTheme.border.withOpacity(0.6),
                         ),
                       ),
-                      child: const Row(
+                      child: Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Icon(Icons.info_outline_rounded, size: 15, color: AppTheme.primary),
-                          SizedBox(width: 8),
+                          Icon(
+                            _selectedUploadMethod == 0
+                                ? Icons.flash_on_rounded
+                                : Icons.info_outline_rounded,
+                            size: 15,
+                            color: AppTheme.primary,
+                          ),
+                          const SizedBox(width: 8),
                           Expanded(
                             child: Text(
-                              'Dán link Google Drive, Docs, Dropbox, OneDrive hoặc PDF online. Đường link sẽ được lưu trực tiếp vào trường fileUrlOrPath trong Firestore và có thể bấm mở trực tiếp.',
-                              style: TextStyle(
+                              _selectedUploadMethod == 0
+                                  ? 'Mẹo nhanh (0s): Dán trực tiếp link Google Drive, Docs, Dropbox, OneDrive hoặc PDF online để lưu ngay mà không mất thời gian chờ tải tệp.'
+                                  : 'Tệp tải từ máy tính được lưu trữ an toàn trên Supabase Storage Free (tối đa 50MB/file) và tạo link CDN công khai để xem và tải về.',
+                              style: const TextStyle(
                                 fontSize: 11.5,
                                 color: AppTheme.textSecondary,
                                 height: 1.35,
@@ -549,6 +776,7 @@ class _DocumentFormModalState extends State<DocumentFormModal> {
           ),
         ],
       ),
-    );
-  }
+    ),
+  );
+}
 }

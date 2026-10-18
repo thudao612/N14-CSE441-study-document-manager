@@ -114,4 +114,55 @@ class FileHelper {
       );
     }
   }
+
+  /// Tải tệp về máy từ đường dẫn đám mây (Supabase Storage / Web URL)
+  static Future<void> downloadDocument(
+    BuildContext context,
+    String path, {
+    String? customFileName,
+  }) async {
+    final cleanPath = path.trim();
+    if (cleanPath.isEmpty) return;
+
+    try {
+      if (isWebLink(cleanPath)) {
+        Uri uri = Uri.parse(cleanPath);
+        // Thêm tham số ?download để kích hoạt tải tệp trực tiếp trong trình duyệt
+        if (cleanPath.contains('/storage/v1/object/')) {
+          final queryParams = Map<String, String>.from(uri.queryParameters);
+          queryParams['download'] = customFileName ?? getFileName(cleanPath);
+          uri = uri.replace(queryParameters: queryParams);
+        }
+
+        if (await canLaunchUrl(uri)) {
+          await launchUrl(uri, mode: LaunchMode.externalApplication);
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Đang tải tệp: ${getFileName(cleanPath)}'),
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+          }
+          return;
+        }
+      } else {
+        final result = await OpenFilex.open(cleanPath);
+        if (result.type == ResultType.done) {
+          return;
+        }
+      }
+    } catch (_) {
+      // Bỏ qua lỗi
+    }
+
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Không thể tải tệp: ${getFileName(cleanPath)}'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
 }

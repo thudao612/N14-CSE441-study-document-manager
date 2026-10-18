@@ -4,8 +4,10 @@ import '../../domain/entities/document.dart';
 import '../controllers/document_controller.dart';
 import '../theme/app_theme.dart';
 import '../utils/file_helper.dart';
+import 'share_document_dialog.dart';
 
 /// Thẻ hiển thị một tài liệu học tập chuẩn phong cách Cashew
+/// Tích hợp nhận diện vai trò: Chủ sở hữu (Owner), Biên tập (Editor), Chỉ xem (Viewer)
 class DocumentCard extends StatelessWidget {
   final Document document;
   final DocumentController controller;
@@ -22,6 +24,82 @@ class DocumentCard extends StatelessWidget {
     required this.onDelete,
   });
 
+  Widget _buildRoleBadge() {
+    if (document.isOwner) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+        decoration: BoxDecoration(
+          color: const Color(0xFFFFF3E0),
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(color: const Color(0xFFFFB74D)),
+        ),
+        child: const Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.workspace_premium_rounded, size: 12, color: Color(0xFFE65100)),
+            SizedBox(width: 3),
+            Text(
+              'Chủ sở hữu',
+              style: TextStyle(
+                fontSize: 10.5,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFFE65100),
+              ),
+            ),
+          ],
+        ),
+      );
+    } else if (document.userRole == 'editor') {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+        decoration: BoxDecoration(
+          color: const Color(0xFFE0F2F1),
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(color: const Color(0xFF80CBC4)),
+        ),
+        child: const Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.edit_note_rounded, size: 13, color: Color(0xFF00695C)),
+            SizedBox(width: 3),
+            Text(
+              'Biên tập',
+              style: TextStyle(
+                fontSize: 10.5,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF00695C),
+              ),
+            ),
+          ],
+        ),
+      );
+    } else {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+        decoration: BoxDecoration(
+          color: const Color(0xFFEDE7F6),
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(color: const Color(0xFFB39DDB)),
+        ),
+        child: const Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.visibility_outlined, size: 12, color: Color(0xFF4527A0)),
+            SizedBox(width: 3),
+            Text(
+              'Chỉ xem',
+              style: TextStyle(
+                fontSize: 10.5,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF4527A0),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final type = document.type;
@@ -36,7 +114,7 @@ class DocumentCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Hàng Header: Badge phân loại + Môn học + Favorite + Menu
+              // Hàng Header: Badge phân loại + Vai trò + Môn học + Favorite + Menu
               Row(
                 children: [
                   // Badge Phân loại
@@ -62,7 +140,11 @@ class DocumentCard extends StatelessWidget {
                       ],
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 6),
+
+                  // Huy hiệu vai trò (Chủ sở hữu / Biên tập / Chỉ xem)
+                  _buildRoleBadge(),
+                  const SizedBox(width: 6),
 
                   // Chip Môn học
                   Flexible(
@@ -102,7 +184,7 @@ class DocumentCard extends StatelessWidget {
                   ),
                   const SizedBox(width: 8),
 
-                  // Menu tùy chọn (Sửa / Xóa)
+                  // Menu tùy chọn linh hoạt theo vai trò
                   PopupMenuButton<String>(
                     icon: const Icon(Icons.more_vert_rounded, size: 20, color: AppTheme.textSecondary),
                     padding: EdgeInsets.zero,
@@ -111,28 +193,51 @@ class DocumentCard extends StatelessWidget {
                     onSelected: (value) {
                       if (value == 'edit') onEdit();
                       if (value == 'delete') onDelete();
+                      if (value == 'share') {
+                        ShareDocumentDialog.show(
+                          context,
+                          document: document,
+                          controller: controller,
+                        );
+                      }
                     },
                     itemBuilder: (context) => [
-                      const PopupMenuItem(
-                        value: 'edit',
-                        child: Row(
-                          children: [
-                            Icon(Icons.edit_outlined, size: 18, color: AppTheme.primary),
-                            SizedBox(width: 8),
-                            Text('Chỉnh sửa'),
-                          ],
+                      // Chỉ Chủ sở hữu mới có quyền chia sẻ
+                      if (document.isOwner && controller.canManagePermissions)
+                        const PopupMenuItem(
+                          value: 'share',
+                          child: Row(
+                            children: [
+                              Icon(Icons.share_outlined, size: 18, color: AppTheme.primary),
+                              SizedBox(width: 8),
+                              Text('Chia sẻ quyền'),
+                            ],
+                          ),
                         ),
-                      ),
-                      const PopupMenuItem(
-                        value: 'delete',
-                        child: Row(
-                          children: [
-                            Icon(Icons.delete_outline_rounded, size: 18, color: AppTheme.error),
-                            SizedBox(width: 8),
-                            Text('Xóa tài liệu', style: TextStyle(color: AppTheme.error)),
-                          ],
+                      // Chủ sở hữu và Editor có quyền sửa
+                      if (document.canEdit)
+                        const PopupMenuItem(
+                          value: 'edit',
+                          child: Row(
+                            children: [
+                              Icon(Icons.edit_outlined, size: 18, color: AppTheme.primary),
+                              SizedBox(width: 8),
+                              Text('Chỉnh sửa'),
+                            ],
+                          ),
                         ),
-                      ),
+                      // Duy nhất Chủ sở hữu có quyền xóa
+                      if (document.isOwner)
+                        const PopupMenuItem(
+                          value: 'delete',
+                          child: Row(
+                            children: [
+                              Icon(Icons.delete_outline_rounded, size: 18, color: AppTheme.error),
+                              SizedBox(width: 8),
+                              Text('Xóa tài liệu', style: TextStyle(color: AppTheme.error)),
+                            ],
+                          ),
+                        ),
                     ],
                   ),
                 ],
@@ -168,29 +273,90 @@ class DocumentCard extends StatelessWidget {
                 ),
               ],
 
-              // Thẻ Tags nếu có
+              // Thẻ tác giả nếu là tài liệu được chia sẻ
+              if (document.isShared && document.authorEmail.isNotEmpty) ...[
+                const SizedBox(height: 6),
+                Row(
+                  children: [
+                    const Icon(Icons.person_pin_rounded, size: 14, color: AppTheme.textSecondary),
+                    const SizedBox(width: 4),
+                    Text(
+                      'Chia sẻ bởi: ${document.authorEmail}',
+                      style: const TextStyle(
+                        fontSize: 11.5,
+                        fontStyle: FontStyle.italic,
+                        color: AppTheme.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+
+              // Tệp đính kèm / Liên kết nếu có
+              if (document.hasFileOrLink) ...[
+                const SizedBox(height: 10),
+                InkWell(
+                  onTap: () => FileHelper.openDocument(context, document.fileUrlOrPath),
+                  borderRadius: BorderRadius.circular(10),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                    decoration: BoxDecoration(
+                      color: AppTheme.surfaceVariant,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: AppTheme.border),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          FileHelper.getFileIcon(document.fileUrlOrPath),
+                          size: 16,
+                          color: AppTheme.primary,
+                        ),
+                        const SizedBox(width: 6),
+                        Flexible(
+                          child: Text(
+                            document.fileName,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: AppTheme.primary,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        const Icon(
+                          Icons.open_in_new_rounded,
+                          size: 13,
+                          color: AppTheme.primary,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+
+              // Danh sách Tags
               if (document.tags.isNotEmpty) ...[
                 const SizedBox(height: 10),
                 Wrap(
                   spacing: 6,
                   runSpacing: 4,
-                  children: document.tags.take(4).map((tag) {
-                    return InkWell(
-                      onTap: () => controller.setTagFilter(tag),
-                      borderRadius: BorderRadius.circular(6),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: AppTheme.surfaceVariant,
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Text(
-                          '#$tag',
-                          style: const TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w500,
-                            color: AppTheme.primary,
-                          ),
+                  children: document.tags.take(3).map((tag) {
+                    return Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: AppTheme.surfaceVariant,
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        '#$tag',
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w500,
+                          color: AppTheme.textSecondary,
                         ),
                       ),
                     );
@@ -200,86 +366,22 @@ class DocumentCard extends StatelessWidget {
 
               const SizedBox(height: 12),
 
-              // Footer: Ngày cập nhật + Liên kết (nếu có)
+              // Footer: Ngày cập nhật
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Expanded(
-                    child: Wrap(
-                      crossAxisAlignment: WrapCrossAlignment.center,
-                      spacing: 8,
-                      children: [
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(Icons.access_time_rounded, size: 13, color: AppTheme.textSecondary),
-                            const SizedBox(width: 4),
-                            Text(
-                              'Cập nhật: ${dateFormat.format(document.updatedAt)}',
-                              style: const TextStyle(
-                                fontSize: 11.5,
-                                color: AppTheme.textSecondary,
-                              ),
-                            ),
-                          ],
-                        ),
-                        if (document.authorEmail.isNotEmpty)
-                          Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(Icons.person_outline_rounded, size: 13, color: AppTheme.primary),
-                              const SizedBox(width: 3),
-                              Text(
-                                document.authorEmail,
-                                style: const TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w500,
-                                  color: AppTheme.primary,
-                                ),
-                              ),
-                            ],
-                          ),
-                      ],
+                  const Icon(
+                    Icons.access_time_rounded,
+                    size: 13,
+                    color: AppTheme.textSecondary,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    dateFormat.format(document.updatedAt),
+                    style: const TextStyle(
+                      fontSize: 11.5,
+                      color: AppTheme.textSecondary,
                     ),
                   ),
-                  if (document.hasFileOrLink)
-                    InkWell(
-                      onTap: () => FileHelper.openDocument(context, document.fileUrlOrPath),
-                      borderRadius: BorderRadius.circular(6),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: FileHelper.getFileBgColor(document.fileUrlOrPath),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              FileHelper.getFileIcon(document.fileUrlOrPath),
-                              size: 13,
-                              color: FileHelper.getFileColor(document.fileUrlOrPath),
-                            ),
-                            const SizedBox(width: 4),
-                            ConstrainedBox(
-                              constraints: const BoxConstraints(maxWidth: 130),
-                              child: Text(
-                                FileHelper.isWebLink(document.fileUrlOrPath)
-                                    ? 'Mở liên kết'
-                                    : document.fileName,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w700,
-                                  color: FileHelper.getFileColor(document.fileUrlOrPath),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
                 ],
               ),
             ],
