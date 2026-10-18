@@ -8,8 +8,10 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
 -- ==============================================================================
--- 2. HÀM TRÍCH XUẤT FIREBASE UID TỪ JWT CLAIMS HOẶC HEADERS
--- Hỗ trợ xác thực người dùng thông qua Firebase ID Token được chuyển tiếp tới Supabase
+-- 2. HÀM TRÍCH XUẤT FIREBASE UID TỪ JWT CLAIMS AN TOÀN
+-- Hỗ trợ xác thực người dùng thông qua Firebase ID Token (JWT) được chuyển tiếp tới Supabase.
+-- ⚠️ LƯU Ý AN NINH: Đã LOẠI BỎ hoàn toàn việc đọc UID từ header tùy chỉnh 'x-firebase-uid'
+-- để loại trừ nguy cơ mạo danh người dùng từ client không được xác thực.
 -- ==============================================================================
 CREATE OR REPLACE FUNCTION public.current_user_id()
 RETURNS text AS $$
@@ -17,7 +19,7 @@ DECLARE
   jwt_claims jsonb;
   v_sub text;
 BEGIN
-  -- 1. Trích xuất từ request.jwt.claim.sub (chuẩn PostgREST khi giải mã JWT)
+  -- 1. Trích xuất từ request.jwt.claim.sub (chuẩn PostgREST khi giải mã Firebase JWT)
   BEGIN
     v_sub := nullif(current_setting('request.jwt.claim.sub', true), '');
   EXCEPTION WHEN OTHERS THEN
@@ -28,11 +30,18 @@ BEGIN
     RETURN v_sub;
   END IF;
 
-  -- 2. Trích xuất từ đối tượng jsonb request.jwt.claims
+  -- 2. Trích xuất từ đối tượng jsonb request.jwt.claims (sub hoặc user_id của Firebase)
   BEGIN
     jwt_claims := nullif(current_setting('request.jwt.claims', true), '')::jsonb;
     IF jwt_claims IS NOT NULL THEN
+      -- Firebase ID Token chứa UID tại claim 'sub'
       v_sub := jwt_claims ->> 'sub';
+      IF v_sub IS NOT NULL AND v_sub <> '' THEN
+        RETURN v_sub;
+      END IF;
+
+      -- Một số cấu hình Firebase đặt UID tại claim 'user_id'
+      v_sub := jwt_claims ->> 'user_id';
       IF v_sub IS NOT NULL AND v_sub <> '' THEN
         RETURN v_sub;
       END IF;
@@ -51,9 +60,9 @@ BEGIN
     -- Bỏ qua
   END;
 
-  -- 4. Trích xuất từ header tùy chỉnh 'x-firebase-uid' (khi truyền kèm qua client)
+  -- 4. Dự phòng auth.jwt() ->> 'sub'
   BEGIN
-    v_sub := nullif(current_setting('request.headers', true)::jsonb ->> 'x-firebase-uid', '');
+    v_sub := auth.jwt() ->> 'sub';
     IF v_sub IS NOT NULL AND v_sub <> '' THEN
       RETURN v_sub;
     END IF;
@@ -61,6 +70,7 @@ BEGIN
     -- Bỏ qua
   END;
 
+  -- TUYỆT ĐỐI KHÔNG đọc từ header 'x-firebase-uid' vì client có thể can thiệp giả mạo.
   RETURN NULL;
 END;
 $$ LANGUAGE plpgsql STABLE SECURITY DEFINER;
@@ -117,7 +127,57 @@ CREATE INDEX IF NOT EXISTS idx_permissions_doc_user ON public.permissions(docume
 CREATE INDEX IF NOT EXISTS idx_permissions_user ON public.permissions(user_id);
 
 -- ==============================================================================
--- 5. BẬT ROW LEVEL SECURITY (RLS) VÀ THIẾT LẬP CHÍNH SÁCH BẢO MẬT
+-- 5. CÁC HÀM HỖ TRỢ SCHEMA PRIVATE TRÁNH LỖI ĐỆ QUY RLS
+-- ==============================================================================
+CREATE SCHEMA IF NOT EXISTS private;
+GRANT USAGE ON SCHEMA private TO anon, authenticated, service_role;
+
+DROP FUNCTION IF EXISTS private.is_document_owner(text, text) CASCADE;
+DROP FUNCTION IF EXISTS private.has_document_permission(text, text, text) CASCADE;
+DROP FUNCTION IF EXISTS private.has_document_permission(text, text) CASCADE;
+
+-- Hàm kiểm tra chủ sở hữu tài liệu (SECURITY DEFINER để tránh đệ quy RLS)
+CREATE OR REPLACE FUNCTION private.is_document_owner(doc_id text, check_uid text)
+RETURNS boolean AS $$
+BEGIN
+  IF check_uid IS NULL OR check_uid = '' THEN
+    RETURN FALSE;
+  END IF;
+
+  RETURN EXISTS (
+    SELECT 1 FROM public.documents
+    WHERE id = doc_id AND owner_id = check_uid
+  );
+END;
+$$ LANGUAGE plpgsql STABLE SECURITY DEFINER;
+
+-- Hàm kiểm tra quyền chia sẻ tài liệu (SECURITY DEFINER để tránh đệ quy RLS)
+CREATE OR REPLACE FUNCTION private.has_document_permission(doc_id text, check_uid text, check_role text DEFAULT NULL)
+RETURNS boolean AS $$
+BEGIN
+  IF check_uid IS NULL OR check_uid = '' THEN
+    RETURN FALSE;
+  END IF;
+
+  IF check_role IS NULL THEN
+    RETURN EXISTS (
+      SELECT 1 FROM public.permissions
+      WHERE document_id = doc_id AND user_id = check_uid
+    );
+  ELSE
+    RETURN EXISTS (
+      SELECT 1 FROM public.permissions
+      WHERE document_id = doc_id AND user_id = check_uid AND role = check_role
+    );
+  END IF;
+END;
+$$ LANGUAGE plpgsql STABLE SECURITY DEFINER;
+
+GRANT EXECUTE ON FUNCTION private.is_document_owner(text, text) TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION private.has_document_permission(text, text, text) TO anon, authenticated;
+
+-- ==============================================================================
+-- 6. BẬT ROW LEVEL SECURITY (RLS) VÀ THIẾT LẬP CHÍNH SÁCH BẢO MẬT
 -- ==============================================================================
 
 -- BẬT RLS CHO CẢ 3 BẢNG
@@ -141,7 +201,10 @@ DROP POLICY IF EXISTS "Users can insert own profile" ON public.users;
 CREATE POLICY "Users can insert own profile"
 ON public.users FOR INSERT
 TO anon, authenticated
-WITH CHECK (id = public.current_user_id());
+WITH CHECK (
+  id = public.current_user_id()
+  AND public.current_user_id() IS NOT NULL
+);
 
 -- UPDATE: Người dùng chỉ được cập nhật hồ sơ của chính mình
 DROP POLICY IF EXISTS "Users can update own profile" ON public.users;
@@ -156,56 +219,41 @@ WITH CHECK (id = public.current_user_id());
 -- Phân quyền nghiêm ngặt: Chủ sở hữu vs Người được chia sẻ vs Người ngoài
 -- ------------------------------------------------------------------------------
 
--- 1. SELECT: Người dùng chỉ được xem tài liệu nếu là CHỦ SỞ HỮU hoặc ĐƯỢC CHIA SẺ
+-- 1. SELECT: Chủ sở hữu HOẶC người được cấp quyền trong permissions
 DROP POLICY IF EXISTS "View documents owned or shared" ON public.documents;
 CREATE POLICY "View documents owned or shared"
 ON public.documents FOR SELECT
 TO anon, authenticated
 USING (
   owner_id = public.current_user_id()
-  OR EXISTS (
-    SELECT 1 FROM public.permissions p
-    WHERE p.document_id = public.documents.id
-      AND p.user_id = public.current_user_id()
-  )
+  OR private.has_document_permission(id, public.current_user_id())
 );
 
--- 2. INSERT: Người dùng chỉ được tạo tài liệu mới với chính mình là chủ sở hữu
+-- 2. INSERT: Chỉ người dùng đã xác thực mới được tạo tài liệu mới với chính mình là owner
 DROP POLICY IF EXISTS "Create document as owner" ON public.documents;
 CREATE POLICY "Create document as owner"
 ON public.documents FOR INSERT
 TO anon, authenticated
 WITH CHECK (
   owner_id = public.current_user_id()
+  AND public.current_user_id() IS NOT NULL
 );
 
--- 3. UPDATE: CHỦ SỞ HỮU hoặc NGƯỜI CÓ QUYỀN 'editor' mới được cập nhật metadata
--- NGƯỜI CÓ QUYỀN 'viewer' VÀ NGƯỜI NGOÀI BỊ TỪ CHỐI TUYỆT ĐỐI!
+-- 3. UPDATE: Chủ sở hữu hoặc người có role 'editor'
 DROP POLICY IF EXISTS "Update document as owner or editor" ON public.documents;
 CREATE POLICY "Update document as owner or editor"
 ON public.documents FOR UPDATE
 TO anon, authenticated
 USING (
   owner_id = public.current_user_id()
-  OR EXISTS (
-    SELECT 1 FROM public.permissions p
-    WHERE p.document_id = public.documents.id
-      AND p.user_id = public.current_user_id()
-      AND p.role = 'editor'
-  )
+  OR private.has_document_permission(id, public.current_user_id(), 'editor')
 )
 WITH CHECK (
   owner_id = public.current_user_id()
-  OR EXISTS (
-    SELECT 1 FROM public.permissions p
-    WHERE p.document_id = public.documents.id
-      AND p.user_id = public.current_user_id()
-      AND p.role = 'editor'
-  )
+  OR private.has_document_permission(id, public.current_user_id(), 'editor')
 );
 
--- 4. DELETE: DUY NHẤT CHỦ SỞ HỮU mới có quyền xóa tài liệu
--- Editor và Viewer KHÔNG THỂ XÓA!
+-- 4. DELETE: Duy nhất chủ sở hữu mới có quyền xóa
 DROP POLICY IF EXISTS "Delete document only as owner" ON public.documents;
 CREATE POLICY "Delete document only as owner"
 ON public.documents FOR DELETE
@@ -219,67 +267,82 @@ USING (
 -- Kiểm soát quyền chia sẻ và thu hồi quyền chia sẻ
 -- ------------------------------------------------------------------------------
 
--- 1. SELECT: Chủ sở hữu tài liệu HOẶC chính người được chia sẻ mới được xem quyền
+-- 1. SELECT: Người nhận quyền HOẶC Chủ sở hữu tài liệu
 DROP POLICY IF EXISTS "View permissions for owner or granted user" ON public.permissions;
 CREATE POLICY "View permissions for owner or granted user"
 ON public.permissions FOR SELECT
 TO anon, authenticated
 USING (
   user_id = public.current_user_id()
-  OR EXISTS (
-    SELECT 1 FROM public.documents d
-    WHERE d.id = public.permissions.document_id
-      AND d.owner_id = public.current_user_id()
-  )
+  OR private.is_document_owner(document_id, public.current_user_id())
 );
 
--- 2. INSERT: DUY NHẤT CHỦ SỞ HỮU tài liệu mới có quyền cấp chia sẻ cho người khác
+-- 2. INSERT: Duy nhất chủ sở hữu tài liệu mới có quyền chia sẻ
 DROP POLICY IF EXISTS "Grant permission only by document owner" ON public.permissions;
 CREATE POLICY "Grant permission only by document owner"
 ON public.permissions FOR INSERT
 TO anon, authenticated
 WITH CHECK (
-  EXISTS (
-    SELECT 1 FROM public.documents d
-    WHERE d.id = public.permissions.document_id
-      AND d.owner_id = public.current_user_id()
-  )
+  private.is_document_owner(document_id, public.current_user_id())
 );
 
--- 3. UPDATE: DUY NHẤT CHỦ SỞ HỮU tài liệu mới có quyền sửa đổi quyền (viewer <-> editor)
+-- 3. UPDATE: Duy nhất chủ sở hữu tài liệu mới có quyền thay đổi role (viewer <-> editor)
 DROP POLICY IF EXISTS "Update permission only by document owner" ON public.permissions;
 CREATE POLICY "Update permission only by document owner"
 ON public.permissions FOR UPDATE
 TO anon, authenticated
 USING (
-  EXISTS (
-    SELECT 1 FROM public.documents d
-    WHERE d.id = public.permissions.document_id
-      AND d.owner_id = public.current_user_id()
-  )
+  private.is_document_owner(document_id, public.current_user_id())
 )
 WITH CHECK (
-  EXISTS (
-    SELECT 1 FROM public.documents d
-    WHERE d.id = public.permissions.document_id
-      AND d.owner_id = public.current_user_id()
-  )
+  private.is_document_owner(document_id, public.current_user_id())
 );
 
--- 4. DELETE: DUY NHẤT CHỦ SỞ HỮU mới có quyền thu hồi chia sẻ (hoặc người được chia sẻ tự rời khỏi)
+-- 4. DELETE: Chủ sở hữu thu hồi quyền HOẶC người được chia sẻ tự hủy quyền của chính mình
 DROP POLICY IF EXISTS "Revoke permission by document owner or self" ON public.permissions;
 CREATE POLICY "Revoke permission by document owner or self"
 ON public.permissions FOR DELETE
 TO anon, authenticated
 USING (
   user_id = public.current_user_id()
-  OR EXISTS (
-    SELECT 1 FROM public.documents d
-    WHERE d.id = public.permissions.document_id
-      AND d.owner_id = public.current_user_id()
-  )
+  OR private.is_document_owner(document_id, public.current_user_id())
 );
 
 -- ==============================================================================
--- HOÀN TẤT THIẾT LẬP CƠ SỞ DỮ LIỆU & RLS CHO SUPABASE
+-- 7. THIẾT LẬP SUPABASE STORAGE BUCKET: documents & BẢO MẬT STORAGE
+-- ==============================================================================
+-- Tạo bucket 'documents' nếu chưa tồn tại
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('documents', 'documents', true)
+ON CONFLICT (id) DO NOTHING;
+
+-- Cho phép người dùng đã xác thực (có Firebase UID) tải tệp lên bucket documents
+DROP POLICY IF EXISTS "Allow authenticated upload to documents bucket" ON storage.objects;
+CREATE POLICY "Allow authenticated upload to documents bucket"
+ON storage.objects FOR INSERT
+TO anon, authenticated
+WITH CHECK (
+  bucket_id = 'documents'
+  AND public.current_user_id() IS NOT NULL
+);
+
+-- Cho phép đọc tệp từ bucket documents
+DROP POLICY IF EXISTS "Allow read from documents bucket" ON storage.objects;
+CREATE POLICY "Allow read from documents bucket"
+ON storage.objects FOR SELECT
+TO anon, authenticated
+USING (bucket_id = 'documents');
+
+-- Cho phép xóa tệp nếu là người sở hữu thư mục {userId}/
+DROP POLICY IF EXISTS "Allow owner to delete their files" ON storage.objects;
+CREATE POLICY "Allow owner to delete their files"
+ON storage.objects FOR DELETE
+TO anon, authenticated
+USING (
+  bucket_id = 'documents'
+  AND (storage.foldername(name))[1] = public.current_user_id()
+);
+
+-- ==============================================================================
+-- HOÀN TẤT THIẾT LẬP CƠ SỞ DỮ LIỆU & STORAGE RLS CHO SUPABASE
 -- ==============================================================================
