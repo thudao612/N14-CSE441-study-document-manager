@@ -26,13 +26,47 @@ class DocumentDetailModal extends StatelessWidget {
     required Document document,
     required DocumentController controller,
   }) {
+    final isDesktopOrWeb = MediaQuery.of(context).size.width >= 600;
+
+    // Trên Web / Desktop: Hiển thị Dialog căn giữa màn hình với maxWidth: 600
+    if (isDesktopOrWeb) {
+      return showDialog(
+        context: context,
+        barrierDismissible: true,
+        builder: (context) => Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 600),
+            child: Dialog(
+              backgroundColor: AppTheme.surface,
+              elevation: 10,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(24),
+              ),
+              clipBehavior: Clip.antiAlias,
+              insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+              child: DocumentDetailModal(
+                document: document,
+                controller: controller,
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    // Trên Mobile: Hiển thị BottomSheet căn giữa và giới hạn maxWidth 600
     return showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => DocumentDetailModal(
-        document: document,
-        controller: controller,
+      builder: (context) => Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 600),
+          child: DocumentDetailModal(
+            document: document,
+            controller: controller,
+          ),
+        ),
       ),
     );
   }
@@ -40,52 +74,62 @@ class DocumentDetailModal extends StatelessWidget {
   void _confirmDelete(BuildContext context) {
     showDialog(
       context: context,
-      builder: (dialogCtx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('Xác nhận xóa tài liệu'),
-        content: Text(
-          'Bạn có chắc chắn muốn xóa tài liệu "${document.title}" không? Hành động này không thể hoàn tác.',
+      builder: (dialogCtx) => Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 480),
+          child: AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            scrollable: true,
+            title: const Text('Xác nhận xóa tài liệu'),
+            content: Text(
+              'Bạn có chắc chắn muốn xóa tài liệu "${document.title}" không? Hành động này không thể hoàn tác.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogCtx),
+                child: const Text('Hủy'),
+              ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(backgroundColor: AppTheme.error),
+                onPressed: () async {
+                  Navigator.pop(dialogCtx); // Đóng dialog
+                  Navigator.pop(context); // Đóng detail sheet
+                  final success = await controller.deleteDocument(document.id);
+                  if (context.mounted && success) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Đã xóa tài liệu thành công.'),
+                        backgroundColor: AppTheme.secondary,
+                        behavior: SnackBarBehavior.floating,
+                      ),
+                    );
+                  }
+                },
+                child: const Text('Xóa', style: TextStyle(color: Colors.white)),
+              ),
+            ],
+          ),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogCtx),
-            child: const Text('Hủy'),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.error),
-            onPressed: () async {
-              Navigator.pop(dialogCtx); // Đóng dialog
-              Navigator.pop(context); // Đóng detail sheet
-              final success = await controller.deleteDocument(document.id);
-              if (context.mounted && success) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Đã xóa tài liệu thành công.'),
-                    backgroundColor: AppTheme.secondary,
-                    behavior: SnackBarBehavior.floating,
-                  ),
-                );
-              }
-            },
-            child: const Text('Xóa', style: TextStyle(color: Colors.white)),
-          ),
-        ],
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final isDesktopOrWeb = MediaQuery.of(context).size.width >= 600;
     final type = document.type;
     final dateFormat = DateFormat('dd/MM/yyyy HH:mm');
 
     return Container(
       constraints: BoxConstraints(
+        maxWidth: 600,
         maxHeight: MediaQuery.of(context).size.height * 0.85,
       ),
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: AppTheme.surface,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        borderRadius: isDesktopOrWeb
+            ? BorderRadius.circular(24)
+            : const BorderRadius.vertical(top: Radius.circular(28)),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
