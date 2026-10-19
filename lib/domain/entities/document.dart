@@ -17,6 +17,9 @@ class Document {
   final String userRole; // 'owner' | 'editor' | 'viewer'
   final String rawFileName;
   final int fileSize;
+  final String locationName;
+  final double? latitude;
+  final double? longitude;
 
   const Document({
     required this.id,
@@ -34,6 +37,9 @@ class Document {
     this.userRole = 'owner',
     this.rawFileName = '',
     this.fileSize = 0,
+    this.locationName = '',
+    this.latitude,
+    this.longitude,
   });
 
   /// Tạo bản sao với các thuộc tính được cập nhật (Immutability pattern)
@@ -53,6 +59,10 @@ class Document {
     String? userRole,
     String? rawFileName,
     int? fileSize,
+    String? locationName,
+    double? latitude,
+    double? longitude,
+    bool clearCoordinates = false,
   }) {
     return Document(
       id: id ?? this.id,
@@ -70,8 +80,19 @@ class Document {
       userRole: userRole ?? this.userRole,
       rawFileName: rawFileName ?? this.rawFileName,
       fileSize: fileSize ?? this.fileSize,
+      locationName: locationName ?? this.locationName,
+      latitude: clearCoordinates ? null : (latitude ?? this.latitude),
+      longitude: clearCoordinates ? null : (longitude ?? this.longitude),
     );
   }
+
+  bool get hasCoordinates =>
+      latitude != null &&
+      longitude != null &&
+      latitude! >= -90 &&
+      latitude! <= 90 &&
+      longitude! >= -180 &&
+      longitude! <= 180;
 
   /// Tiện ích kiểm tra quyền truy cập của người dùng hiện tại
   bool get isOwner => userRole == 'owner';
@@ -114,6 +135,9 @@ class Document {
           type == other.type &&
           description == other.description &&
           fileUrlOrPath == other.fileUrlOrPath &&
+          locationName == other.locationName &&
+          latitude == other.latitude &&
+          longitude == other.longitude &&
           isFavorite == other.isFavorite &&
           createdAt == other.createdAt &&
           updatedAt == other.updatedAt;
@@ -126,6 +150,9 @@ class Document {
       type.hashCode ^
       description.hashCode ^
       fileUrlOrPath.hashCode ^
+      locationName.hashCode ^
+      latitude.hashCode ^
+      longitude.hashCode ^
       isFavorite.hashCode ^
       createdAt.hashCode ^
       updatedAt.hashCode;

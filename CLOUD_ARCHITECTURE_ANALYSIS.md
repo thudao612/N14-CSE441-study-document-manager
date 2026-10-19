@@ -4,33 +4,34 @@
 
 | Thành phần | Thực trạng trong dự án | Nhận xét |
 |---|---|---|
-| **Frontend** | Ứng dụng Flutter, tổ chức theo Presentation, Use Cases, Domain và Data. `DocumentController` quản lý trạng thái; giao diện hỗ trợ CRUD, tìm kiếm, lọc, yêu thích và chọn tệp. | Có nền tảng phù hợp để thay nguồn dữ liệu phía sau mà không phải viết lại toàn bộ giao diện. Đây là ứng dụng client; hiện chưa có luồng đăng nhập hay phân quyền. |
-| **Backend/API** | **Chưa có backend hoặc API.** `main.dart` khởi tạo trực tiếp data source và repository trong ứng dụng. | Chưa có dịch vụ trung tâm để xác thực người dùng, áp dụng quyền truy cập hoặc xử lý dữ liệu thống nhất giữa nhiều thiết bị. |
-| **Database** | **Chưa có database.** `DocumentLocalDataSourceImpl` giữ tài liệu trong một danh sách trong bộ nhớ và nạp dữ liệu mẫu. | Dữ liệu tạo hoặc sửa không được lưu bền vững sau khi ứng dụng đóng. `toJson`/`fromJson` trong model chỉ hỗ trợ chuyển đổi dữ liệu, không có nghĩa là đã có nơi lưu JSON. |
-| **File Storage** | **Chưa có kho lưu nội dung tệp.** Biểu mẫu chọn tệp và yêu cầu bytes, nhưng khi lưu tài liệu chỉ ghi tên hoặc đường dẫn vào `fileUrlOrPath`. | Bytes không được lưu hoặc tải lên; đường dẫn cục bộ không dùng được ổn định trên thiết bị khác hoặc Web. Tài liệu dạng liên kết Web là ngoại lệ vì chỉ lưu URL. |
+| **Frontend** | Ứng dụng Flutter đa nền tảng, mã giao diện nằm trong `lib/presentation/`; `DocumentController` quản lý trạng thái và gọi các Use Case. Người dùng có thể CRUD, tìm kiếm/lọc, đánh dấu yêu thích và chọn tệp. | Đây là ứng dụng client, không phải giao diện web kết nối tới server riêng. Hiện chưa có đăng nhập, tài khoản người dùng hoặc phân quyền; danh sách tài liệu và trạng thái được nạp vào client. |
+| **Backend/API** | **Chưa có backend hoặc API.** `main.dart` tự khởi tạo `DocumentLocalDataSourceImpl`, repository, Use Cases và controller ngay trong ứng dụng. | Không có dịch vụ trung tâm để xác thực người dùng, kiểm tra quyền, xử lý yêu cầu hay chia sẻ dữ liệu giữa các client. Nghiệp vụ CRUD và tìm kiếm hiện chạy trong ứng dụng. |
+| **Database** | **Chưa có database.** `DocumentLocalDataSourceImpl` giữ các `DocumentModel` trong `List` ở RAM và nạp sáu bản ghi mẫu khi khởi tạo. Model có `toJson`/`fromJson`, nhưng không có thao tác đọc/ghi JSON vào database hoặc tệp. | Metadata do người dùng thêm/sửa chỉ tồn tại trong phiên chạy; khởi động lại sẽ khởi tạo lại dữ liệu mẫu. Không có bản ghi bền vững, chia sẻ hay cơ chế đồng bộ đa thiết bị. |
+| **File Storage** | **Chưa có kho lưu nội dung tệp.** Form dùng `file_picker` để chọn PDF/DOC/DOCX/TXT và yêu cầu bytes, nhưng chỉ lưu giá trị tên/đường dẫn vào trường `fileUrlOrPath`. | Bytes không được ghi xuống thiết bị hoặc tải lên dịch vụ; đường dẫn cục bộ không phải định danh tệp dùng chung và có thể không tồn tại trên nền tảng/thiết bị khác. Tài liệu có URL Web chỉ lưu địa chỉ URL, không lưu bản sao nội dung. |
 
-**Luồng dữ liệu hiện tại:** giao diện Flutter → Controller/Use Cases → Repository → data source in-memory. Dự án chưa cấu hình dịch vụ cloud.
+**Luồng dữ liệu hiện tại:** giao diện Flutter → `DocumentController` → Use Cases → `DocumentRepositoryImpl` → `DocumentLocalDataSourceImpl` (danh sách trong RAM). Dự án chưa cấu hình backend, database, kho tệp bền vững hoặc dịch vụ cloud.
 
 ## 2. Điểm nghẽn và hạn chế
 
 ### Các hạn chế đã xác nhận trong mã nguồn
 
-- **Mất dữ liệu khi khởi động lại:** data source lưu trong RAM và nạp dữ liệu mẫu, không có lưu trữ bền vững.
-- **Tệp đính kèm chưa được lưu:** ứng dụng mới ghi nhận tên hoặc đường dẫn; không đảm bảo tải lại hay mở được tệp đã chọn.
-- **Không đồng bộ giữa thiết bị:** chưa có API, database dùng chung hoặc danh tính người dùng.
-- **Lọc và tìm kiếm phía client:** repository lấy toàn bộ tài liệu rồi lọc; cách này không phù hợp khi lượng dữ liệu tăng đáng kể.
-- **Thiếu năng lực vận hành:** chưa có xác thực, phân quyền, sao lưu, nhật ký tập trung hoặc giám sát dịch vụ.
+- **Phụ thuộc RAM và giới hạn tăng trưởng:** metadata được giữ trong danh sách trong RAM của tiến trình ứng dụng. Repository lấy toàn bộ tài liệu rồi lọc trên client; vì vậy bộ nhớ và thời gian tìm kiếm tăng theo số lượng bản ghi. Điều này có thể gây áp lực lên RAM/hiệu năng của thiết bị khi dữ liệu tăng, nhưng hiện chưa có phép đo cho thấy ngưỡng hay mức suy giảm cụ thể. Bytes của tệp không được giữ trong danh sách này.
+- **Mất thay đổi khi ứng dụng kết thúc:** data source không ghi xuống database hoặc bộ nhớ bền vững. Khi khởi động lại, dữ liệu mẫu được nạp lại; tài liệu mới, nội dung đã sửa hoặc thao tác xóa trước đó không được bảo toàn.
+- **Không đồng bộ và không chia sẻ dữ liệu:** không có tài khoản, API hoặc kho dữ liệu trung tâm. Mỗi lần chạy chỉ có trạng thái cục bộ trong bộ nhớ của client; các thiết bị/người dùng không nhận được cập nhật chung và không có cơ chế xử lý xung đột.
+- **Tệp đính kèm chưa được lưu:** ứng dụng chỉ lưu tên hoặc đường dẫn vào metadata, không lưu bytes. Đường dẫn cục bộ không đảm bảo truy cập được trên thiết bị khác; riêng Web thường không cung cấp đường dẫn tệp cục bộ có thể tái sử dụng.
+- **Thiếu kiểm soát và vận hành tập trung:** mã hiện chưa có đăng nhập/phân quyền, sao lưu/phục hồi, nhật ký tập trung hoặc giám sát dịch vụ. Do chưa có backend/database đang vận hành, đây là năng lực chưa được triển khai chứ không phải sự cố vận hành đã quan sát.
 
 ### Hạn chế có thể gặp trên hạ tầng truyền thống
 
-Chưa có bằng chứng dự án hiện chạy trên máy chủ truyền thống. Nếu triển khai theo mô hình máy chủ đơn, database và ổ đĩa cục bộ, các rủi ro thường gặp gồm:
+Ứng dụng hiện tại là client Flutter với data source in-memory; chưa có bằng chứng dự án đã được triển khai trên máy chủ on-premise. Nếu hệ thống được mở rộng theo mô hình truyền thống (máy chủ, database và ổ đĩa tại chỗ do nhóm tự vận hành), cần lưu ý các rủi ro sau:
 
-- Phải tự vận hành, vá lỗi và mở rộng máy chủ.
-- Máy chủ hoặc ổ đĩa đơn lẻ có thể trở thành điểm lỗi.
-- Sao lưu và phục hồi dữ liệu cần được tự thiết kế, kiểm tra và vận hành.
-- Dung lượng tệp tăng có thể đòi hỏi đầu tư hạ tầng trước khi sử dụng hết công suất.
+- **RAM và năng lực máy chủ:** nếu backend/database cùng chạy trên máy chủ có RAM hạn chế, lượng truy cập đồng thời hoặc dữ liệu tăng có thể làm tăng sử dụng bộ nhớ, gây phản hồi chậm hoặc thiếu tài nguyên. Cần sizing và đo tải thực tế; dự án hiện không có backend để khẳng định đã gặp tình trạng này.
+- **Thiếu đồng bộ nếu chỉ dựa vào lưu trữ cục bộ:** dữ liệu nằm riêng trên từng thiết bị hoặc máy chủ đơn lẻ không tự đồng bộ. Muốn nhiều người dùng cùng truy cập cần xây dựng dịch vụ trung tâm, xác thực, phân quyền và quy tắc xử lý cập nhật đồng thời.
+- **Rủi ro điểm lỗi đơn và gián đoạn:** một máy chủ hoặc ổ đĩa vật lý bị hỏng, mất điện hay mất kết nối có thể khiến dịch vụ/tệp không truy cập được nếu không có dự phòng.
+- **Rủi ro dữ liệu và bảo mật on-premise:** nhóm phải tự cấu hình mạng/firewall, cập nhật bản vá, kiểm soát quyền truy cập vật lý và logic, cũng như thiết kế và kiểm tra sao lưu/phục hồi. Thiếu các biện pháp này có thể dẫn đến mất dữ liệu hoặc truy cập trái phép.
+- **Chi phí và mở rộng:** cần tự mua/bảo trì thiết bị, bố trí dung lượng và năng lực dự phòng; tăng dung lượng tệp hoặc tải truy cập có thể cần đầu tư và triển khai phần cứng trước khi sử dụng.
 
-Đây là các rủi ro của mô hình giả định, không phải sự cố đã quan sát ở hệ thống hiện tại.
+Các điểm trên là rủi ro của mô hình on-premise giả định để so sánh, không phải hạ tầng hiện tại hay sự cố đã quan sát của dự án. Hiện trạng đã xác nhận là ứng dụng chưa có backend, database và kho tệp bền vững.
 
 ## 3. Checklist 3: Lựa chọn mô hình Cloud và Dịch vụ cụ thể
 

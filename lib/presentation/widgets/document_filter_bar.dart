@@ -26,7 +26,9 @@ class DocumentFilterBar extends StatelessWidget {
                 filter.type == null &&
                 !filter.isFavoriteOnly &&
                 filter.subject == null &&
-                filter.tag == null,
+                filter.tag == null &&
+                (filter.searchQuery == null ||
+                    filter.searchQuery!.trim().isEmpty),
             onTap: () {
               controller.setSourceFilter('all');
               controller.resetFilter();
@@ -104,6 +106,44 @@ class DocumentFilterBar extends StatelessWidget {
             isSelected: filter.type == DocumentType.reference,
             onTap: () => controller.setTypeFilter(DocumentType.reference),
           ),
+
+          if (controller.tags.isNotEmpty) ...[
+            const SizedBox(width: 8),
+            PopupMenuButton<String>(
+              tooltip: 'Lọc theo tag',
+              onSelected: (tag) => controller.setTagFilter(
+                tag.isEmpty ? null : tag,
+              ),
+              itemBuilder: (context) => [
+                const PopupMenuItem<String>(
+                  value: '',
+                  child: Text('Tất cả tag'),
+                ),
+                ...controller.tags.map(
+                  (tag) => PopupMenuItem<String>(
+                    value: tag,
+                    child: Row(
+                      children: [
+                        Expanded(child: Text('#$tag')),
+                        if (filter.tag == tag)
+                          const Icon(Icons.check, size: 18),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+              child: IgnorePointer(
+                child: _FilterChipItem(
+                  label: 'Lọc tag',
+                  icon: Icons.tag_rounded,
+                  iconColor: AppTheme.primary,
+                  isSelected: filter.tag != null,
+                  onTap: () {},
+                  trailing: const Icon(Icons.arrow_drop_down_rounded),
+                ),
+              ),
+            ),
+          ],
 
           // Nếu có chọn Subject
           if (filter.subject != null) ...[
@@ -187,7 +227,9 @@ class _FilterChipItem extends StatelessWidget {
               Icon(
                 icon,
                 size: 18,
-                color: isSelected ? Colors.white : (iconColor ?? AppTheme.textSecondary),
+                color: isSelected
+                    ? Colors.white
+                    : (iconColor ?? AppTheme.textSecondary),
               ),
               const SizedBox(width: 7),
             ],

@@ -48,6 +48,8 @@ dependencies:
   supabase_flutter: ^2.5.0
   cloudinary_public: ^0.23.1
   dio: ^5.4.0
+  flutter_map: ^8.3.2
+  latlong2: ^0.10.1
 
 dev_dependencies:
   flutter_test:

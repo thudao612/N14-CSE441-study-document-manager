@@ -200,7 +200,8 @@ class SupabaseDocumentRepository
       final model = DocumentModel.fromEntity(docToInsert);
       final supabaseJson = model.toSupabaseJson();
 
-      debugPrint('Inserting document to Supabase: ${model.id} (owner: $currentUid)');
+      debugPrint(
+          'Inserting document to Supabase: ${model.id} (owner: $currentUid)');
       await _client.from('documents').insert(supabaseJson);
 
       return docToInsert;
@@ -234,6 +235,9 @@ class SupabaseDocumentRepository
         'file_name': model.rawFileName,
         'tags': model.tags,
         'is_favorite': model.isFavorite,
+        'location_name': model.locationName,
+        'lat': model.latitude,
+        'long': model.longitude,
         'updated_at': DateTime.now().toIso8601String(),
       };
 
@@ -275,7 +279,8 @@ class SupabaseDocumentRepository
       debugPrint('Deleting document on Supabase: $id');
       // RLS Policy "Delete document only as owner":
       // Duy nhất chủ sở hữu mới có quyền xóa. Editor và Viewer bị RLS chặn!
-      final res = await _client.from('documents').delete().eq('id', id).select();
+      final res =
+          await _client.from('documents').delete().eq('id', id).select();
 
       if ((res as List).isEmpty) {
         throw Exception(
@@ -369,7 +374,8 @@ class SupabaseDocumentRepository
       throw ArgumentError('Email người nhận không được để trống.');
     }
     if (role != 'viewer' && role != 'editor') {
-      throw ArgumentError('Quyền chia sẻ chỉ có thể là "viewer" hoặc "editor".');
+      throw ArgumentError(
+          'Quyền chia sẻ chỉ có thể là "viewer" hoặc "editor".');
     }
 
     try {
@@ -393,7 +399,8 @@ class SupabaseDocumentRepository
 
       // 2. Không cho phép tự chia sẻ tài liệu cho chính mình
       if (targetUserId == _currentUserId) {
-        throw Exception('Bạn là Chủ sở hữu tài liệu này, không cần chia sẻ cho chính mình.');
+        throw Exception(
+            'Bạn là Chủ sở hữu tài liệu này, không cần chia sẻ cho chính mình.');
       }
 
       // 3. Upsert quyền vào bảng permissions
@@ -419,7 +426,8 @@ class SupabaseDocumentRepository
       );
       return model.toEntity().copyWith(userEmail: cleanEmail);
     } on PostgrestException catch (e) {
-      debugPrint('Supabase shareDocument PostgrestException: ${e.message} (${e.code})');
+      debugPrint(
+          'Supabase shareDocument PostgrestException: ${e.message} (${e.code})');
       if (e.code == '42501') {
         throw Exception(
           'Lỗi phân quyền RLS: Chỉ Chủ sở hữu (Owner) mới có quyền chia sẻ tài liệu này.',
@@ -438,7 +446,8 @@ class SupabaseDocumentRepository
     required String targetUserId,
   }) async {
     try {
-      debugPrint('Revoking permission on doc $documentId for user $targetUserId');
+      debugPrint(
+          'Revoking permission on doc $documentId for user $targetUserId');
       // RLS Policy "Revoke permission by document owner or self" kiểm tra quyền
       await _client
           .from('permissions')
@@ -519,7 +528,8 @@ class SupabaseDocumentRepository
           'Lỗi bảo mật RLS khi đồng bộ người dùng: Token Firebase chưa được Supabase xác thực.',
         );
       }
-      throw Exception('Lỗi đồng bộ hồ sơ người dùng lên Supabase: ${e.message}');
+      throw Exception(
+          'Lỗi đồng bộ hồ sơ người dùng lên Supabase: ${e.message}');
     } catch (e) {
       debugPrint('Supabase syncUserProfile error: $e');
       rethrow;

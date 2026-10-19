@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
+import 'package:latlong2/latlong.dart';
 import '../../domain/entities/document.dart';
 import '../controllers/document_controller.dart';
 import '../theme/app_theme.dart';
 import '../utils/file_helper.dart';
 import 'document_form_modal.dart';
+import 'document_location_map.dart';
 import 'share_document_dialog.dart';
 
 /// Modal xem chi tiết tài liệu học tập
@@ -106,7 +108,8 @@ class DocumentDetailModal extends StatelessWidget {
             child: Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
                     color: type.badgeBackgroundColor,
                     borderRadius: BorderRadius.circular(8),
@@ -128,7 +131,8 @@ class DocumentDetailModal extends StatelessWidget {
                 ),
                 const SizedBox(width: 8),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
                     color: document.isOwner
                         ? const Color(0xFFFFF3E0)
@@ -164,8 +168,12 @@ class DocumentDetailModal extends StatelessWidget {
                 const Spacer(),
                 IconButton(
                   icon: Icon(
-                    document.isFavorite ? Icons.star_rounded : Icons.star_outline_rounded,
-                    color: document.isFavorite ? Colors.amber : AppTheme.textSecondary,
+                    document.isFavorite
+                        ? Icons.star_rounded
+                        : Icons.star_outline_rounded,
+                    color: document.isFavorite
+                        ? Colors.amber
+                        : AppTheme.textSecondary,
                   ),
                   tooltip: document.isFavorite ? 'Bỏ yêu thích' : 'Yêu thích',
                   onPressed: () => controller.toggleFavorite(document.id),
@@ -188,7 +196,8 @@ class DocumentDetailModal extends StatelessWidget {
                 children: [
                   // Môn học
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
                       color: AppTheme.surfaceVariant,
                       borderRadius: BorderRadius.circular(8),
@@ -203,6 +212,60 @@ class DocumentDetailModal extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 12),
+
+                  if (document.locationName.trim().isNotEmpty ||
+                      document.hasCoordinates) ...[
+                    const Text(
+                      'Địa điểm lưu tài liệu',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: AppTheme.textSecondary,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    if (document.locationName.trim().isNotEmpty) ...[
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.place_outlined,
+                            size: 18,
+                            color: AppTheme.primary,
+                          ),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              document.locationName,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w600,
+                                color: AppTheme.textPrimary,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                    ],
+                    if (document.hasCoordinates)
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(14),
+                        child: SizedBox(
+                          height: 190,
+                          child: DocumentLocationMap(
+                            center: LatLng(
+                              document.latitude!,
+                              document.longitude!,
+                            ),
+                            marker: LatLng(
+                              document.latitude!,
+                              document.longitude!,
+                            ),
+                            zoom: 14,
+                          ),
+                        ),
+                      ),
+                    const SizedBox(height: 16),
+                  ],
 
                   // Tiêu đề
                   SelectableText(
@@ -260,10 +323,12 @@ class DocumentDetailModal extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.all(14),
                       decoration: BoxDecoration(
-                        color: FileHelper.getFileBgColor(document.fileUrlOrPath),
+                        color:
+                            FileHelper.getFileBgColor(document.fileUrlOrPath),
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(
-                          color: FileHelper.getFileColor(document.fileUrlOrPath).withOpacity(0.35),
+                          color: FileHelper.getFileColor(document.fileUrlOrPath)
+                              .withOpacity(0.35),
                           width: 1.2,
                         ),
                       ),
@@ -279,8 +344,10 @@ class DocumentDetailModal extends StatelessWidget {
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                                 child: Icon(
-                                  FileHelper.getFileIcon(document.fileUrlOrPath),
-                                  color: FileHelper.getFileColor(document.fileUrlOrPath),
+                                  FileHelper.getFileIcon(
+                                      document.fileUrlOrPath),
+                                  color: FileHelper.getFileColor(
+                                      document.fileUrlOrPath),
                                   size: 26,
                                 ),
                               ),
@@ -299,13 +366,16 @@ class DocumentDetailModal extends StatelessWidget {
                                     ),
                                     const SizedBox(height: 2),
                                     Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 6, vertical: 1.5),
                                       decoration: BoxDecoration(
-                                        color: FileHelper.getFileColor(document.fileUrlOrPath),
+                                        color: FileHelper.getFileColor(
+                                            document.fileUrlOrPath),
                                         borderRadius: BorderRadius.circular(4),
                                       ),
                                       child: Text(
-                                        FileHelper.getFileBadgeLabel(document.fileUrlOrPath),
+                                        FileHelper.getFileBadgeLabel(
+                                            document.fileUrlOrPath),
                                         style: const TextStyle(
                                           fontSize: 10,
                                           fontWeight: FontWeight.w700,
@@ -318,13 +388,16 @@ class DocumentDetailModal extends StatelessWidget {
                               ),
                               IconButton(
                                 icon: const Icon(Icons.copy_rounded, size: 20),
-                                color: FileHelper.getFileColor(document.fileUrlOrPath),
+                                color: FileHelper.getFileColor(
+                                    document.fileUrlOrPath),
                                 tooltip: 'Sao chép đường dẫn',
                                 onPressed: () {
-                                  Clipboard.setData(ClipboardData(text: document.fileUrlOrPath));
+                                  Clipboard.setData(ClipboardData(
+                                      text: document.fileUrlOrPath));
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     const SnackBar(
-                                      content: Text('Đã sao chép đường dẫn vào clipboard'),
+                                      content: Text(
+                                          'Đã sao chép đường dẫn vào clipboard'),
                                       behavior: SnackBarBehavior.floating,
                                     ),
                                   );
@@ -339,9 +412,11 @@ class DocumentDetailModal extends StatelessWidget {
                               Expanded(
                                 child: ElevatedButton.icon(
                                   style: ElevatedButton.styleFrom(
-                                    backgroundColor: FileHelper.getFileColor(document.fileUrlOrPath),
+                                    backgroundColor: FileHelper.getFileColor(
+                                        document.fileUrlOrPath),
                                     foregroundColor: Colors.white,
-                                    padding: const EdgeInsets.symmetric(vertical: 12),
+                                    padding: const EdgeInsets.symmetric(
+                                        vertical: 12),
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(12),
                                     ),
@@ -361,21 +436,27 @@ class DocumentDetailModal extends StatelessWidget {
                                       fontWeight: FontWeight.w700,
                                     ),
                                   ),
-                                  onPressed: () => FileHelper.openDocument(context, document.fileUrlOrPath),
+                                  onPressed: () => FileHelper.openDocument(
+                                      context, document.fileUrlOrPath),
                                 ),
                               ),
                               const SizedBox(width: 8),
                               Expanded(
                                 child: OutlinedButton.icon(
                                   style: OutlinedButton.styleFrom(
-                                    foregroundColor: FileHelper.getFileColor(document.fileUrlOrPath),
-                                    side: BorderSide(color: FileHelper.getFileColor(document.fileUrlOrPath)),
-                                    padding: const EdgeInsets.symmetric(vertical: 12),
+                                    foregroundColor: FileHelper.getFileColor(
+                                        document.fileUrlOrPath),
+                                    side: BorderSide(
+                                        color: FileHelper.getFileColor(
+                                            document.fileUrlOrPath)),
+                                    padding: const EdgeInsets.symmetric(
+                                        vertical: 12),
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(12),
                                     ),
                                   ),
-                                  icon: const Icon(Icons.download_rounded, size: 18),
+                                  icon: const Icon(Icons.download_rounded,
+                                      size: 18),
                                   label: const Text(
                                     'Tải về máy',
                                     style: TextStyle(
@@ -414,7 +495,8 @@ class DocumentDetailModal extends StatelessWidget {
                       runSpacing: 6,
                       children: document.tags.map((tag) {
                         return Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 5),
                           decoration: BoxDecoration(
                             color: AppTheme.surfaceVariant,
                             borderRadius: BorderRadius.circular(8),
@@ -437,18 +519,22 @@ class DocumentDetailModal extends StatelessWidget {
                   // Metadata thời gian
                   Row(
                     children: [
-                      const Icon(Icons.calendar_today_rounded, size: 14, color: AppTheme.textSecondary),
+                      const Icon(Icons.calendar_today_rounded,
+                          size: 14, color: AppTheme.textSecondary),
                       const SizedBox(width: 6),
                       Text(
                         'Tạo lúc: ${dateFormat.format(document.createdAt)}',
-                        style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+                        style: const TextStyle(
+                            fontSize: 12, color: AppTheme.textSecondary),
                       ),
                       const Spacer(),
-                      const Icon(Icons.update_rounded, size: 14, color: AppTheme.textSecondary),
+                      const Icon(Icons.update_rounded,
+                          size: 14, color: AppTheme.textSecondary),
                       const SizedBox(width: 6),
                       Text(
                         'Cập nhật: ${dateFormat.format(document.updatedAt)}',
-                        style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+                        style: const TextStyle(
+                            fontSize: 12, color: AppTheme.textSecondary),
                       ),
                     ],
                   ),
@@ -464,7 +550,8 @@ class DocumentDetailModal extends StatelessWidget {
                               style: OutlinedButton.styleFrom(
                                 foregroundColor: AppTheme.primary,
                                 side: const BorderSide(color: AppTheme.primary),
-                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 14),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(14),
                                 ),
@@ -492,7 +579,8 @@ class DocumentDetailModal extends StatelessWidget {
                                 borderRadius: BorderRadius.circular(14),
                               ),
                             ),
-                            icon: const Icon(Icons.delete_outline_rounded, size: 18),
+                            icon: const Icon(Icons.delete_outline_rounded,
+                                size: 18),
                             label: const Text('Xóa'),
                             onPressed: () => _confirmDelete(context),
                           ),
@@ -555,12 +643,15 @@ class DocumentDetailModal extends StatelessWidget {
                       ),
                       child: const Row(
                         children: [
-                          Icon(Icons.lock_outline_rounded, size: 18, color: AppTheme.textSecondary),
+                          Icon(Icons.lock_outline_rounded,
+                              size: 18, color: AppTheme.textSecondary),
                           SizedBox(width: 10),
                           Expanded(
                             child: Text(
                               'Bạn có quyền Chỉ xem (Viewer). Chức năng chỉnh sửa và xóa bị vô hiệu hóa.',
-                              style: TextStyle(fontSize: 12.5, color: AppTheme.textSecondary),
+                              style: TextStyle(
+                                  fontSize: 12.5,
+                                  color: AppTheme.textSecondary),
                             ),
                           ),
                         ],

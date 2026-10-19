@@ -22,6 +22,9 @@ void main() {
         title: 'Tiêu đề cũ',
         subject: 'Môn học cũ',
         type: DocumentType.lecture,
+        locationName: 'Phòng học A203',
+        latitude: 21.0285,
+        longitude: 105.8542,
         createdAt: DateTime.now().subtract(const Duration(days: 1)),
         updatedAt: DateTime.now().subtract(const Duration(days: 1)),
       );
@@ -47,8 +50,72 @@ void main() {
       expect(result.subject, 'Môn học mới');
       expect(result.type, DocumentType.exercise);
       expect(result.isFavorite, true);
+      expect(result.locationName, 'Phòng học A203');
+      expect(result.latitude, 21.0285);
+      expect(result.longitude, 105.8542);
       expect(result.updatedAt.isAfter(initialDoc.updatedAt), true);
       expect(mockRepository.updateDocumentCallCount, 1);
+    });
+
+    test('Xóa vị trí ghim theo yêu cầu cập nhật', () async {
+      final initialDoc = Document(
+        id: 'doc-location',
+        title: 'Tài liệu có vị trí',
+        subject: 'Môn học',
+        type: DocumentType.lecture,
+        locationName: 'Phòng học A203',
+        latitude: 21.0285,
+        longitude: 105.8542,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      );
+      mockRepository.storage.add(initialDoc);
+
+      final result = await updateDocumentUseCase.execute(
+        const UpdateDocumentParams(
+          id: 'doc-location',
+          title: 'Tài liệu có vị trí',
+          subject: 'Môn học',
+          type: DocumentType.lecture,
+          locationName: '',
+          clearCoordinates: true,
+        ),
+      );
+
+      expect(result.locationName, isEmpty);
+      expect(result.latitude, isNull);
+      expect(result.longitude, isNull);
+    });
+
+    test('Thay thế địa điểm cũ khi cập nhật sang địa điểm mới', () async {
+      final initialDoc = Document(
+        id: 'doc-location-update',
+        title: 'Tài liệu',
+        subject: 'Môn học',
+        type: DocumentType.lecture,
+        locationName: 'Học viện Kỹ thuật Mật mã',
+        latitude: 20.9841,
+        longitude: 105.7998,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      );
+      mockRepository.storage.add(initialDoc);
+
+      final result = await updateDocumentUseCase.execute(
+        const UpdateDocumentParams(
+          id: 'doc-location-update',
+          title: 'Tài liệu',
+          subject: 'Môn học',
+          type: DocumentType.lecture,
+          locationName: 'Đại học Thủy lợi',
+          latitude: 21.0077,
+          longitude: 105.8264,
+        ),
+      );
+
+      expect(result.locationName, 'Đại học Thủy lợi');
+      expect(result.latitude, 21.0077);
+      expect(result.longitude, 105.8264);
     });
 
     test('Ném ngoại lệ StateError khi ID không tồn tại', () async {
