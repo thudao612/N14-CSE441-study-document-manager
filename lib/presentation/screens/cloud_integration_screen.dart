@@ -15,25 +15,28 @@ class CloudIntegrationScreen extends StatelessWidget {
 
     final permissionRows = [
       DocumentPermission(
+        id: 'perm-001',
         documentId: 'doc-001',
         userId: 'user-001',
-        grantedBy: 'demo-owner',
-        level: PermissionLevel.owner,
-        grantedAt: DateTime.now(),
+        userEmail: 'owner@student.local',
+        role: 'editor',
+        createdAt: DateTime.now(),
       ),
       DocumentPermission(
+        id: 'perm-002',
         documentId: 'doc-001',
         userId: 'user-002',
-        grantedBy: 'demo-owner',
-        level: PermissionLevel.editor,
-        grantedAt: DateTime.now(),
+        userEmail: 'editor@student.local',
+        role: 'editor',
+        createdAt: DateTime.now(),
       ),
       DocumentPermission(
+        id: 'perm-003',
         documentId: 'doc-001',
         userId: 'user-003',
-        grantedBy: 'demo-owner',
-        level: PermissionLevel.viewer,
-        grantedAt: DateTime.now(),
+        userEmail: 'viewer@student.local',
+        role: 'viewer',
+        createdAt: DateTime.now(),
       ),
     ];
 
@@ -116,7 +119,7 @@ class CloudIntegrationScreen extends StatelessWidget {
                         child: Row(
                           children: [
                             Expanded(child: Text('User ${permission.userId}')),
-                            Expanded(child: Text(permission.levelLabel)),
+                            Expanded(child: Text(permission.role)),
                             Expanded(
                               child: Text(
                                 permission.documentId,

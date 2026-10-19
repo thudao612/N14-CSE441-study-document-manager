@@ -1,13 +1,10 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:google_sign_in/google_sign_in.dart';
 
 import '../domain/entities/user_profile.dart';
 
 class CloudAuthService {
   CloudAuthService();
-
-  final GoogleSignIn _googleSignIn = GoogleSignIn.standard(scopes: ['email']);
 
   AppUserProfile? _currentUser;
   bool _isFirebaseReady = false;
@@ -46,20 +43,10 @@ class CloudAuthService {
     }
 
     try {
-      final googleUser = await _googleSignIn.signIn();
-      if (googleUser == null) {
-        return _currentUser;
-      }
-
-      final googleAuth = await googleUser.authentication;
-      final credential = GoogleAuthProvider.credential(
-        accessToken: googleAuth.accessToken,
-        idToken: googleAuth.idToken,
-      );
-
-      final firebaseUserCredential =
-          await FirebaseAuth.instance.signInWithCredential(credential);
-      final firebaseUser = firebaseUserCredential.user;
+      final googleProvider = GoogleAuthProvider();
+      final userCredential =
+          await FirebaseAuth.instance.signInWithProvider(googleProvider);
+      final firebaseUser = userCredential.user;
 
       if (firebaseUser == null) {
         return _currentUser;
@@ -82,9 +69,8 @@ class CloudAuthService {
   Future<void> signOut() async {
     try {
       await FirebaseAuth.instance.signOut();
-      await _googleSignIn.signOut();
     } catch (_) {
-      // Demo mode fallback: the app remains functional without live Firebase config.
+      // Demo mode fallback
     }
     _currentUser = null;
   }

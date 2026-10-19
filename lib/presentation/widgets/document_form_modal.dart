@@ -29,13 +29,47 @@ class DocumentFormModal extends StatefulWidget {
     required DocumentController controller,
     Document? document,
   }) {
+    final isDesktopOrWeb = MediaQuery.of(context).size.width >= 600;
+
+    // Trên Web / Desktop: Hiển thị Dialog căn giữa màn hình với maxWidth: 600
+    if (isDesktopOrWeb) {
+      return showDialog(
+        context: context,
+        barrierDismissible: true,
+        builder: (context) => Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 600),
+            child: Dialog(
+              backgroundColor: AppTheme.surface,
+              elevation: 10,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(24),
+              ),
+              clipBehavior: Clip.antiAlias,
+              insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+              child: DocumentFormModal(
+                controller: controller,
+                initialDocument: document,
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    // Trên Mobile: Hiển thị BottomSheet căn giữa và giới hạn maxWidth 600
     return showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => DocumentFormModal(
-        controller: controller,
-        initialDocument: document,
+      builder: (context) => Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 600),
+          child: DocumentFormModal(
+            controller: controller,
+            initialDocument: document,
+          ),
+        ),
       ),
     );
   }
@@ -282,14 +316,18 @@ class _DocumentFormModalState extends State<DocumentFormModal> {
 
   @override
   Widget build(BuildContext context) {
+    final isDesktopOrWeb = MediaQuery.of(context).size.width >= 600;
     final keyboardPadding = MediaQuery.of(context).viewInsets.bottom;
 
     return Material(
       color: AppTheme.surface,
-      borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+      borderRadius: isDesktopOrWeb
+          ? BorderRadius.circular(24)
+          : const BorderRadius.vertical(top: Radius.circular(28)),
       clipBehavior: Clip.antiAlias,
       child: Container(
         constraints: BoxConstraints(
+          maxWidth: 600,
           maxHeight: MediaQuery.of(context).size.height * 0.9,
         ),
         padding: EdgeInsets.only(bottom: keyboardPadding),
