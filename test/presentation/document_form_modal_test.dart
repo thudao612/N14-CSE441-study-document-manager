@@ -27,7 +27,8 @@ void main() {
     );
   });
 
-  testWidgets('DocumentFormModal: Giao diện nhập URL duy nhất và kiểm tra validation',
+  testWidgets(
+      'DocumentFormModal: Giao diện nhập URL duy nhất và kiểm tra validation',
       (WidgetTester tester) async {
     tester.view.physicalSize = const Size(1200, 1600);
     tester.view.devicePixelRatio = 1.0;
@@ -80,16 +81,18 @@ void main() {
 
     // 4. Nhập tiêu đề và môn học hợp lệ, nhưng URL không có scheme http/https
     final textFields = find.byType(TextFormField);
-    // index 0: title, index 1: subject, index 2: link/fileUrl, index 3: desc, index 4: tag
+    // index 0: title, 1: subject, 2: link, 3: description, 4: tag, 5: location
     await tester.enterText(textFields.at(0), 'Tài liệu Ôn tập Toán rời rạc');
     await tester.enterText(textFields.at(1), 'Toán rời rạc');
     await tester.enterText(textFields.at(2), 'invalid-url-without-http');
+    await tester.enterText(textFields.at(5), 'Phòng học A203');
 
     await tester.tap(find.text('Thêm tài liệu'));
     await tester.pumpAndSettle();
 
     expect(
-      find.text('Đường link không hợp lệ (cần bắt đầu bằng http:// hoặc https://)'),
+      find.text(
+          'Đường link không hợp lệ (cần bắt đầu bằng http:// hoặc https://)'),
       findsOneWidget,
     );
 
@@ -112,6 +115,7 @@ void main() {
     final savedDoc = controller.documents.first;
     expect(savedDoc.title, 'Tài liệu Ôn tập Toán rời rạc');
     expect(savedDoc.subject, 'Toán rời rạc');
+    expect(savedDoc.locationName, 'Phòng học A203');
     expect(
       savedDoc.fileUrlOrPath,
       'https://drive.google.com/file/d/1A2B3C4D5E/view',

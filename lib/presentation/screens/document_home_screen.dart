@@ -72,7 +72,7 @@ class DocumentHomeScreen extends StatelessWidget {
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: [
                   BoxShadow(
-                    color: AppTheme.primary.withOpacity(0.35),
+                    color: AppTheme.primary.withValues(alpha: 0.35),
                     blurRadius: 12,
                     offset: const Offset(0, 4),
                   ),

@@ -44,7 +44,8 @@ class FirestoreDocumentRepository implements IDocumentRepository {
           'Vui lòng đảm bảo đã đăng nhập và Security Rules cho phép "request.auth != null".',
         );
       }
-      throw Exception('Lỗi Firestore [${e.code}]: ${e.message ?? e.toString()}');
+      throw Exception(
+          'Lỗi Firestore [${e.code}]: ${e.message ?? e.toString()}');
     } catch (e) {
       throw Exception('Lỗi đọc dữ liệu Firestore: $e');
     }
@@ -77,7 +78,8 @@ class FirestoreDocumentRepository implements IDocumentRepository {
       final currentUser = _auth.currentUser;
       final currentUserId = currentUser?.uid ?? document.userId;
       final authorEmail = currentUser?.email ??
-          (currentUser?.displayName != null && currentUser!.displayName!.isNotEmpty
+          (currentUser?.displayName != null &&
+                  currentUser!.displayName!.isNotEmpty
               ? currentUser.displayName!
               : (currentUser?.isAnonymous == true
                   ? 'Khách ẩn danh'
@@ -106,7 +108,8 @@ class FirestoreDocumentRepository implements IDocumentRepository {
           'Vui lòng kiểm tra lại trạng thái đăng nhập hoặc Security Rules trên Firebase Console.',
         );
       }
-      throw Exception('Lỗi ghi Firestore [${e.code}]: ${e.message ?? e.toString()}');
+      throw Exception(
+          'Lỗi ghi Firestore [${e.code}]: ${e.message ?? e.toString()}');
     }
   }
 
@@ -174,7 +177,7 @@ class FirestoreDocumentRepository implements IDocumentRepository {
       // 4. Lọc theo Thẻ (Tag)
       if (filter.tag != null && filter.tag!.trim().isNotEmpty) {
         final targetTag = filter.tag!.toLowerCase().trim();
-        final hasTag = doc.tags.any((t) => t.toLowerCase() == targetTag);
+        final hasTag = doc.tags.any((t) => t.toLowerCase().trim() == targetTag);
         if (!hasTag) {
           return false;
         }

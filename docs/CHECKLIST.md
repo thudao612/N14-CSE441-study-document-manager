@@ -36,7 +36,7 @@
   - Thiết lập ContentType tự động (PDF, Word, TXT) và Metadata (`uploadedBy`, `originalName`).
 - **Supabase PostgreSQL Schema (`supabase/schema.sql`):**
   - Bảng `users`: `id` (Firebase UID PK), `email`, `display_name`, `photo_url`, `created_at`, `updated_at`.
-  - Bảng `documents`: `id` (PK), `title`, `subject`, `type`, `description`, `file_url`, `file_name`, `file_size`, `tags` (JSONB), `is_favorite`, `owner_id` (FK `users.id`), `author_email`, `created_at`, `updated_at`.
+  - Bảng `documents`: `id` (PK), `title`, `subject`, `type`, `description`, `file_url`, `file_name`, `file_size`, `tags` (JSONB), `is_favorite`, `location_name`, `lat`, `long`, `owner_id` (FK `users.id`), `author_email`, `created_at`, `updated_at`.
   - Bảng `permissions`: `id` (PK), `document_id` (FK `documents.id`), `user_id` (FK `users.id`), `role` ('viewer' | 'editor'), `created_at`, ràng buộc `UNIQUE(document_id, user_id)`.
 
 ### 4. CHECKLIST 4: CHỨC NĂNG ỨNG DỤNG & QUẢN LÝ QUYỀN CHIA SẺ

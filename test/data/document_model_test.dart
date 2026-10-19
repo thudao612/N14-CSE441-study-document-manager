@@ -5,6 +5,46 @@ import 'package:study_document_manager/domain/entities/document_type.dart';
 
 void main() {
   group('DocumentModel serialization & deserialization Tests', () {
+    test('đọc và ghi tên địa điểm cùng tọa độ cho Firestore/Supabase', () {
+      final model = DocumentModel.fromJson({
+        'id': 'doc-location',
+        'title': 'Tài liệu tại lớp',
+        'subject': 'CNTT',
+        'type': 'lecture',
+        'description': '',
+        'file_url': '',
+        'tags': const <String>[],
+        'is_favorite': false,
+        'created_at': '2026-10-10T00:00:00.000',
+        'updated_at': '2026-10-10T00:00:00.000',
+        'location_name': 'Phòng học A203',
+        'lat': 21.0285,
+        'long': '105.8542',
+      });
+
+      expect(model.locationName, 'Phòng học A203');
+      expect(model.latitude, 21.0285);
+      expect(model.longitude, 105.8542);
+      expect(model.toFirestoreJson()['lat'], 21.0285);
+      expect(model.toFirestoreJson()['long'], 105.8542);
+      expect(model.toSupabaseJson()['location_name'], 'Phòng học A203');
+      expect(model.toSupabaseJson()['lat'], 21.0285);
+      expect(model.toSupabaseJson()['long'], 105.8542);
+      expect(model.toEntity().hasCoordinates, isTrue);
+    });
+
+    test('tọa độ không có trên dữ liệu cũ tiếp tục được hỗ trợ', () {
+      final model = DocumentModel.fromJson({
+        'id': 'legacy-doc',
+        'title': 'Tài liệu cũ',
+      });
+
+      expect(model.locationName, isEmpty);
+      expect(model.latitude, isNull);
+      expect(model.longitude, isNull);
+      expect(model.toEntity().hasCoordinates, isFalse);
+    });
+
     test('fromJson map chính xác userId và authorEmail', () {
       final json = {
         'id': 'doc-123',
@@ -53,7 +93,8 @@ void main() {
       expect(json['userId'], 'uid-student-1');
       expect(json['authorEmail'], 'student1@school.edu.vn');
 
-      expect(firestoreJson.containsKey('id'), false); // Firestore doc ID tách riêng
+      expect(firestoreJson.containsKey('id'),
+          false); // Firestore doc ID tách riêng
       expect(firestoreJson['userId'], 'uid-student-1');
       expect(firestoreJson['authorEmail'], 'student1@school.edu.vn');
     });

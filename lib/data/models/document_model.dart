@@ -19,6 +19,9 @@ class DocumentModel {
   final String userRole; // 'owner' | 'editor' | 'viewer'
   final String rawFileName;
   final int fileSize;
+  final String locationName;
+  final double? latitude;
+  final double? longitude;
 
   const DocumentModel({
     required this.id,
@@ -36,6 +39,9 @@ class DocumentModel {
     this.userRole = 'owner',
     this.rawFileName = '',
     this.fileSize = 0,
+    this.locationName = '',
+    this.latitude,
+    this.longitude,
   });
 
   static String _parseDate(dynamic val) {
@@ -46,6 +52,12 @@ class DocumentModel {
       if (date is DateTime) return date.toIso8601String();
     } catch (_) {}
     return DateTime.now().toIso8601String();
+  }
+
+  static double? _parseCoordinate(dynamic value) {
+    if (value is num) return value.toDouble();
+    if (value is String) return double.tryParse(value);
+    return null;
   }
 
   /// Chuyển đổi từ JSON Map sang Model
@@ -60,17 +72,16 @@ class DocumentModel {
           .toList();
     }
 
-    final fileUrl = json['fileUrlOrPath'] as String? ??
-        (json['file_url'] as String? ?? '');
+    final fileUrl =
+        json['fileUrlOrPath'] as String? ?? (json['file_url'] as String? ?? '');
 
-    final ownerId = json['userId'] as String? ??
-        (json['owner_id'] as String? ?? '');
+    final ownerId =
+        json['userId'] as String? ?? (json['owner_id'] as String? ?? '');
 
-    final fileName = json['rawFileName'] as String? ??
-        (json['file_name'] as String? ?? '');
+    final fileName =
+        json['rawFileName'] as String? ?? (json['file_name'] as String? ?? '');
 
-    final size = json['fileSize'] as int? ??
-        (json['file_size'] as int? ?? 0);
+    final size = json['fileSize'] as int? ?? (json['file_size'] as int? ?? 0);
 
     final role = json['userRole'] as String? ??
         (json['user_role'] as String? ?? 'owner');
@@ -94,6 +105,10 @@ class DocumentModel {
       userRole: role,
       rawFileName: fileName,
       fileSize: size,
+      locationName: json['locationName'] as String? ??
+          (json['location_name'] as String? ?? ''),
+      latitude: _parseCoordinate(json['latitude'] ?? json['lat']),
+      longitude: _parseCoordinate(json['longitude'] ?? json['long']),
     );
   }
 
@@ -115,6 +130,9 @@ class DocumentModel {
       'userRole': userRole,
       'rawFileName': rawFileName,
       'fileSize': fileSize,
+      'locationName': locationName,
+      'latitude': latitude,
+      'longitude': longitude,
     };
   }
 
@@ -132,6 +150,9 @@ class DocumentModel {
       'updatedAt': updatedAt,
       'userId': userId,
       'authorEmail': authorEmail,
+      'locationName': locationName,
+      'lat': latitude,
+      'long': longitude,
     };
   }
 
@@ -152,6 +173,9 @@ class DocumentModel {
       'is_favorite': isFavorite,
       'owner_id': userId,
       'author_email': authorEmail,
+      'location_name': locationName,
+      'lat': latitude,
+      'long': longitude,
       'created_at': createdAt,
       'updated_at': updatedAt,
     };
@@ -175,6 +199,9 @@ class DocumentModel {
       userRole: entity.userRole,
       rawFileName: entity.rawFileName,
       fileSize: entity.fileSize,
+      locationName: entity.locationName,
+      latitude: entity.latitude,
+      longitude: entity.longitude,
     );
   }
 
@@ -196,6 +223,9 @@ class DocumentModel {
       userRole: userRole,
       rawFileName: rawFileName,
       fileSize: fileSize,
+      locationName: locationName,
+      latitude: latitude,
+      longitude: longitude,
     );
   }
 }

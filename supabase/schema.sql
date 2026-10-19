@@ -101,11 +101,19 @@ CREATE TABLE IF NOT EXISTS public.documents (
   file_size BIGINT DEFAULT 0,                -- Dung lượng tệp tính bằng bytes
   tags JSONB DEFAULT '[]'::jsonb,            -- Danh sách thẻ từ khóa (mảng JSON)
   is_favorite BOOLEAN DEFAULT FALSE,         -- Đánh dấu yêu thích
+  location_name TEXT DEFAULT '',              -- Tên địa điểm lưu tài liệu
+  lat DOUBLE PRECISION,                       -- Vĩ độ vị trí trên bản đồ
+  "long" DOUBLE PRECISION,                    -- Kinh độ vị trí trên bản đồ
   owner_id TEXT NOT NULL REFERENCES public.users(id) ON DELETE CASCADE, -- Chủ sở hữu tài liệu (Firebase UID)
   author_email TEXT DEFAULT '',              -- Email người tạo tài liệu
   created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now())
 );
+
+ALTER TABLE public.documents
+  ADD COLUMN IF NOT EXISTS location_name TEXT DEFAULT '',
+  ADD COLUMN IF NOT EXISTS lat DOUBLE PRECISION,
+  ADD COLUMN IF NOT EXISTS "long" DOUBLE PRECISION;
 
 -- BẢNG 3: permissions (Quản lý quyền chia sẻ tài liệu giữa các người dùng)
 CREATE TABLE IF NOT EXISTS public.permissions (

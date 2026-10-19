@@ -42,15 +42,15 @@ class DocumentFilter {
     if (tag != null && tag!.trim().isNotEmpty) {
       final targetTag = tag!.toLowerCase().trim();
       final tags = doc.tags as List<dynamic>? ?? [];
-      final hasTag = tags.any((t) => t.toString().toLowerCase() == targetTag);
+      final hasTag = tags.any(
+        (t) => t.toString().toLowerCase().trim() == targetTag,
+      );
       if (!hasTag) return false;
     }
     if (searchQuery != null && searchQuery!.trim().isNotEmpty) {
       final query = searchQuery!.toLowerCase().trim();
-      final titleMatch =
-          doc.title.toString().toLowerCase().contains(query);
-      final subjectMatch =
-          doc.subject.toString().toLowerCase().contains(query);
+      final titleMatch = doc.title.toString().toLowerCase().contains(query);
+      final subjectMatch = doc.subject.toString().toLowerCase().contains(query);
       final descMatch =
           doc.description.toString().toLowerCase().contains(query);
       final tags = doc.tags as List<dynamic>? ?? [];

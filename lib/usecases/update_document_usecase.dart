@@ -12,6 +12,10 @@ class UpdateDocumentParams {
   final String fileUrlOrPath;
   final List<String> tags;
   final bool isFavorite;
+  final String? locationName;
+  final double? latitude;
+  final double? longitude;
+  final bool clearCoordinates;
 
   const UpdateDocumentParams({
     required this.id,
@@ -22,6 +26,10 @@ class UpdateDocumentParams {
     this.fileUrlOrPath = '',
     this.tags = const [],
     this.isFavorite = false,
+    this.locationName,
+    this.latitude,
+    this.longitude,
+    this.clearCoordinates = false,
   });
 }
 
@@ -74,6 +82,10 @@ class UpdateDocumentUseCase {
       fileUrlOrPath: params.fileUrlOrPath.trim(),
       tags: cleanTags,
       isFavorite: params.isFavorite,
+      locationName: params.locationName?.trim() ?? existingDoc.locationName,
+      latitude: params.latitude,
+      longitude: params.longitude,
+      clearCoordinates: params.clearCoordinates,
       updatedAt: DateTime.now(),
     );
 

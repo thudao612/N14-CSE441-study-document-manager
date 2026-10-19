@@ -12,6 +12,9 @@ class AddDocumentParams {
   final String fileUrlOrPath;
   final List<String> tags;
   final bool isFavorite;
+  final String locationName;
+  final double? latitude;
+  final double? longitude;
 
   const AddDocumentParams({
     required this.title,
@@ -21,6 +24,9 @@ class AddDocumentParams {
     this.fileUrlOrPath = '',
     this.tags = const [],
     this.isFavorite = false,
+    this.locationName = '',
+    this.latitude,
+    this.longitude,
   });
 }
 
@@ -70,6 +76,9 @@ class AddDocumentUseCase {
       fileUrlOrPath: params.fileUrlOrPath.trim(),
       tags: cleanTags,
       isFavorite: params.isFavorite,
+      locationName: params.locationName.trim(),
+      latitude: params.latitude,
+      longitude: params.longitude,
       createdAt: now,
       updatedAt: now,
     );
