@@ -9,12 +9,15 @@
 * **Checklist 1 (CL1)**: Thiết kế kiến trúc hệ thống và mô hình dữ liệu kết hợp giữa Firebase (Authentication/Messaging) và Supabase (Database/Storage).
 * **Thành viên thực hiện:** Đào Hà Thu (Nhóm trưởng - TV1).
 * **Nhánh làm việc được phân công:** `feature/tv1-project-setup` *(nhánh cục bộ kiểm tra: `master`)*.
-* **Môi trường phát triển xác minh thực tế:** 
-  * **Flutter Version:** `3.47.7` (Channel stable, revision `abaf9c5237`).
-  * **Dart Version:** `3.13.5` (DevTools 2.60.0).
-  * **Java Development Kit (JDK):** Microsoft OpenJDK `17.0.20.1 LTS` (x64) - đã cấu hình `flutter config --jdk-dir`.
-  * **Android Toolchain:** Gradle `8.14.6`, Android `compileSdk 36`, Android Emulator API 37 (`sdk gphone16k x86 64`).
-  * **Hệ điều hành:** Windows 10/11 (Version 10.0.26200.9711).
+* **Môi trường phát triển:**
+  * **1. Mốc khởi tạo ban đầu (Theo phân công nhóm):**
+    * **Flutter:** `3.19.6` • **Dart:** `3.3.4` • **Hệ điều hành:** Windows OS.
+  * **2. Mốc chuẩn hóa & xác minh thực tế (Chạy thành công trên Máy ảo Android & Web):**
+    * **Flutter SDK:** `3.47.7` (Channel stable, revision `abaf9c5237`).
+    * **Dart SDK:** `3.13.5` (DevTools 2.60.0).
+    * **Java Development Kit (JDK):** Microsoft OpenJDK `17.0.20.1 LTS` (x64) - đã cấu hình `flutter config --jdk-dir`.
+    * **Android Toolchain:** Gradle `8.14.6`, Android `compileSdk 36`, Android Emulator API 37 (`sdk gphone16k x86 64`).
+    * **Lý do chuẩn hóa môi trường:** Giữ nguyên vẹn 100% mã nguồn ứng dụng (`lib/`) của các thành viên sau khi merge (chứa các API Flutter hiện đại như `CardThemeData`, `.withValues()`, thư viện Firebase Pigeon) mà không cần can thiệp sửa code, triệt tiêu nguy cơ xung đột (conflict) Git.
 * **Thời điểm rà soát & cập nhật:** 19/10/2026.
 
 ---
