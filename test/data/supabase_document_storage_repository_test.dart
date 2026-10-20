@@ -15,5 +15,15 @@ void main() {
       );
       expect(repo, isA<IDocumentStorageRepository>());
     });
+
+    test('createSignedUrl: Ném ngoại lệ khi chưa kết nối client hoặc path không tồn tại', () async {
+      final repo = SupabaseDocumentStorageRepository(
+        bucketName: 'documents',
+      );
+      expect(
+        () async => await repo.createSignedUrl('invalid_path/file.pdf', expiresIn: 300),
+        throwsA(isA<Exception>()),
+      );
+    });
   });
 }

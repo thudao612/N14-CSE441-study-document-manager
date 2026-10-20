@@ -6,12 +6,14 @@ class AppUserModel {
   final String email;
   final String displayName;
   final String photoUrl;
+  final String fcmToken;
 
   const AppUserModel({
     required this.id,
     required this.email,
     this.displayName = '',
     this.photoUrl = '',
+    this.fcmToken = '',
   });
 
   factory AppUserModel.fromJson(Map<String, dynamic> json) {
@@ -22,6 +24,8 @@ class AppUserModel {
           (json['display_name'] as String? ?? ''),
       photoUrl: json['photoUrl'] as String? ??
           (json['photo_url'] as String? ?? ''),
+      fcmToken: json['fcmToken'] as String? ??
+          (json['fcm_token'] as String? ?? ''),
     );
   }
 
@@ -31,6 +35,7 @@ class AppUserModel {
       'email': email,
       'display_name': displayName,
       'photo_url': photoUrl,
+      'fcm_token': fcmToken,
     };
   }
 
@@ -40,6 +45,7 @@ class AppUserModel {
       email: email,
       displayName: displayName,
       photoUrl: photoUrl,
+      fcmToken: fcmToken,
     );
   }
 }

@@ -109,4 +109,26 @@ class SupabaseDocumentStorageRepository implements IDocumentStorageRepository {
       throw Exception('Không thể tải tệp lên Supabase Storage: $e');
     }
   }
+
+  /// Tạo URL có chữ ký bảo mật tạm thời (Signed URL) cho Private Bucket.
+  /// Giúp ngăn chặn việc truy cập trái phép khi lộ đường dẫn tệp.
+  Future<String> createSignedUrl(
+    String storagePath, {
+    int expiresIn = 300,
+  }) async {
+    try {
+      final storage = _client.storage.from(_bucketName);
+      final signedUrl = await storage.createSignedUrl(storagePath, expiresIn);
+      debugPrint(
+        'Đã tạo Signed URL bảo mật thành công (hết hạn sau ${expiresIn}s): $signedUrl',
+      );
+      return signedUrl;
+    } on StorageException catch (e) {
+      debugPrint('Supabase createSignedUrl error [${e.statusCode}]: ${e.message}');
+      throw Exception('Lỗi tạo Signed URL trên Supabase Storage: ${e.message}');
+    } catch (e) {
+      debugPrint('Lỗi tạo Signed URL: $e');
+      throw Exception('Không thể tạo Signed URL bảo mật: $e');
+    }
+  }
 }

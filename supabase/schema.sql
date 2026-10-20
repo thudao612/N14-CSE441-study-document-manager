@@ -85,9 +85,13 @@ CREATE TABLE IF NOT EXISTS public.users (
   email TEXT NOT NULL UNIQUE,                -- Địa chỉ email của người dùng
   display_name TEXT,                         -- Tên hiển thị
   photo_url TEXT,                            -- Ảnh đại diện
+  fcm_token TEXT DEFAULT '',                 -- Firebase Cloud Messaging Device Token (FCM Push Notification)
   created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now())
 );
+
+ALTER TABLE public.users
+  ADD COLUMN IF NOT EXISTS fcm_token TEXT DEFAULT '';
 
 -- BẢNG 2: documents (Thông tin tài liệu học tập & metadata)
 CREATE TABLE IF NOT EXISTS public.documents (

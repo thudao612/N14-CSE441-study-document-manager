@@ -21,6 +21,7 @@ import 'presentation/controllers/document_controller.dart';
 import 'presentation/screens/document_home_screen.dart';
 import 'presentation/screens/firebase_auth_gate.dart';
 import 'presentation/theme/app_theme.dart';
+import 'services/firebase_messaging_service.dart';
 import 'usecases/add_document_usecase.dart';
 import 'usecases/delete_document_usecase.dart';
 import 'usecases/get_document_borrow_requests_usecase.dart';
@@ -83,7 +84,18 @@ Future<void> main() async {
     }
   }
 
-  // 3. Khởi tạo Storage Repository: Ưu tiên Supabase Storage (Free Tier)
+  // 3. Khởi tạo Firebase Cloud Messaging (FCM Push Notifications & Token Sync)
+  if (isFirebaseReady) {
+    try {
+      final fcmService = FirebaseMessagingService();
+      await fcmService.initialize();
+      debugPrint('Firebase Messaging initialized in main.');
+    } catch (e) {
+      debugPrint('FCM init notice: $e');
+    }
+  }
+
+  // 4. Khởi tạo Storage Repository: Ưu tiên Supabase Storage (Free Tier)
   // Lưu trữ tệp miễn phí, an toàn, không yêu cầu nâng cấp Firebase Blaze
   final IDocumentStorageRepository storageRepository = isSupabaseReady
       ? SupabaseDocumentStorageRepository()

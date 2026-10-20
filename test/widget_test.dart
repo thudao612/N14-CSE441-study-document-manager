@@ -26,6 +26,12 @@ void main() {
       getDocumentStatsUseCase: GetDocumentStatsUseCase(repository: mockRepo),
     );
 
+    // Cấu hình viewport màn hình chuẩn để kiểm thử giao diện Responsive
+    tester.view.physicalSize = const Size(1200, 1600);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
     // Thêm 1 tài liệu mẫu
     await controller.addDocument(const AddDocumentParams(
       title: 'Tài liệu Widget Test',

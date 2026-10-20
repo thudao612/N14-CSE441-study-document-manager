@@ -28,5 +28,6 @@ abstract class IDocumentPermissionRepository {
     required String email,
     String? displayName,
     String? photoUrl,
+    String? fcmToken,
   });
 }

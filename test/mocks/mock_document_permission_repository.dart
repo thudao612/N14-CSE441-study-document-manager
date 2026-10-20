@@ -138,12 +138,14 @@ class MockDocumentPermissionRepository implements IDocumentPermissionRepository 
     required String email,
     String? displayName,
     String? photoUrl,
+    String? fcmToken,
   }) async {
     usersTable[uid] = AppUser(
       id: uid,
       email: email,
       displayName: displayName ?? '',
       photoUrl: photoUrl ?? '',
+      fcmToken: fcmToken ?? '',
     );
   }
 }

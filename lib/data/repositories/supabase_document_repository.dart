@@ -499,6 +499,7 @@ class SupabaseDocumentRepository
     required String email,
     String? displayName,
     String? photoUrl,
+    String? fcmToken,
   }) async {
     final cleanUid = uid.trim();
     final cleanEmail = email.trim().toLowerCase();
@@ -509,13 +510,16 @@ class SupabaseDocumentRepository
     }
 
     try {
-      final payload = {
+      final payload = <String, dynamic>{
         'id': cleanUid,
         'email': cleanEmail,
         'display_name': displayName ?? '',
         'photo_url': photoUrl ?? '',
         'updated_at': DateTime.now().toIso8601String(),
       };
+      if (fcmToken != null && fcmToken.trim().isNotEmpty) {
+        payload['fcm_token'] = fcmToken.trim();
+      }
 
       await _client.from('users').upsert(payload, onConflict: 'id');
       debugPrint('User profile synced to Supabase: $cleanEmail ($cleanUid)');

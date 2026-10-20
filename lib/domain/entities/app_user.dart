@@ -4,12 +4,14 @@ class AppUser {
   final String email;
   final String displayName;
   final String photoUrl;
+  final String fcmToken;
 
   const AppUser({
     required this.id,
     required this.email,
     this.displayName = '',
     this.photoUrl = '',
+    this.fcmToken = '',
   });
 
   String get displayTitle =>
@@ -27,5 +29,6 @@ class AppUser {
   int get hashCode => id.hashCode ^ email.hashCode;
 
   @override
-  String toString() => 'AppUser(id: $id, email: $email, name: $displayName)';
+  String toString() =>
+      'AppUser(id: $id, email: $email, name: $displayName, fcmToken: $fcmToken)';
 }
