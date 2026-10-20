@@ -1,14 +1,20 @@
 import 'package:flutter/foundation.dart';
+import '../../domain/entities/borrow_request.dart';
 import '../../domain/entities/document.dart';
 import '../../domain/entities/document_filter.dart';
 import '../../domain/entities/document_permission.dart';
 import '../../domain/entities/document_type.dart';
 import '../../usecases/add_document_usecase.dart';
 import '../../usecases/delete_document_usecase.dart';
+import '../../usecases/get_document_borrow_requests_usecase.dart';
 import '../../usecases/get_document_permissions_usecase.dart';
 import '../../usecases/get_document_stats_usecase.dart';
 import '../../usecases/get_documents_usecase.dart';
+import '../../usecases/get_my_borrow_request_usecase.dart';
+import '../../usecases/request_document_borrow_usecase.dart';
+import '../../usecases/review_borrow_request_usecase.dart';
 import '../../usecases/revoke_document_permission_usecase.dart';
+import '../../usecases/return_borrow_request_usecase.dart';
 import '../../usecases/search_documents_usecase.dart';
 import '../../usecases/share_document_usecase.dart';
 import '../../usecases/update_document_usecase.dart';
@@ -26,6 +32,11 @@ class DocumentController extends ChangeNotifier {
   final ShareDocumentUseCase? _shareDocumentUseCase;
   final GetDocumentPermissionsUseCase? _getDocumentPermissionsUseCase;
   final RevokeDocumentPermissionUseCase? _revokeDocumentPermissionUseCase;
+  final RequestDocumentBorrowUseCase? _requestDocumentBorrowUseCase;
+  final GetDocumentBorrowRequestsUseCase? _getDocumentBorrowRequestsUseCase;
+  final GetMyBorrowRequestUseCase? _getMyBorrowRequestUseCase;
+  final ReviewBorrowRequestUseCase? _reviewBorrowRequestUseCase;
+  final ReturnBorrowRequestUseCase? _returnBorrowRequestUseCase;
 
   DocumentController({
     required AddDocumentUseCase addDocumentUseCase,
@@ -38,6 +49,11 @@ class DocumentController extends ChangeNotifier {
     ShareDocumentUseCase? shareDocumentUseCase,
     GetDocumentPermissionsUseCase? getDocumentPermissionsUseCase,
     RevokeDocumentPermissionUseCase? revokeDocumentPermissionUseCase,
+    RequestDocumentBorrowUseCase? requestDocumentBorrowUseCase,
+    GetDocumentBorrowRequestsUseCase? getDocumentBorrowRequestsUseCase,
+    GetMyBorrowRequestUseCase? getMyBorrowRequestUseCase,
+    ReviewBorrowRequestUseCase? reviewBorrowRequestUseCase,
+    ReturnBorrowRequestUseCase? returnBorrowRequestUseCase,
   })  : _addDocumentUseCase = addDocumentUseCase,
         _updateDocumentUseCase = updateDocumentUseCase,
         _deleteDocumentUseCase = deleteDocumentUseCase,
@@ -47,7 +63,12 @@ class DocumentController extends ChangeNotifier {
         _uploadDocumentFileUseCase = uploadDocumentFileUseCase,
         _shareDocumentUseCase = shareDocumentUseCase,
         _getDocumentPermissionsUseCase = getDocumentPermissionsUseCase,
-        _revokeDocumentPermissionUseCase = revokeDocumentPermissionUseCase;
+        _revokeDocumentPermissionUseCase = revokeDocumentPermissionUseCase,
+        _requestDocumentBorrowUseCase = requestDocumentBorrowUseCase,
+        _getDocumentBorrowRequestsUseCase = getDocumentBorrowRequestsUseCase,
+        _getMyBorrowRequestUseCase = getMyBorrowRequestUseCase,
+        _reviewBorrowRequestUseCase = reviewBorrowRequestUseCase,
+        _returnBorrowRequestUseCase = returnBorrowRequestUseCase;
 
   // --- STATE ---
   List<Document> _documents = [];
@@ -71,6 +92,11 @@ class DocumentController extends ChangeNotifier {
   String? get errorMessage => _errorMessage;
   bool get canUploadDocumentFile => _uploadDocumentFileUseCase != null;
   bool get canManagePermissions => _shareDocumentUseCase != null;
+  bool get canRequestBorrow => _requestDocumentBorrowUseCase != null &&
+      _getMyBorrowRequestUseCase != null && _returnBorrowRequestUseCase != null;
+  bool get canManageBorrowRequests =>
+      _getDocumentBorrowRequestsUseCase != null &&
+      _reviewBorrowRequestUseCase != null;
   String get sourceFilter => _sourceFilter;
 
   /// Khởi tạo và nạp dữ liệu ban đầu
@@ -319,6 +345,112 @@ class DocumentController extends ChangeNotifier {
       _setLoading(false);
     }
   }
+
+  // --- QUẢN LÝ YÊU CẦU MƯỢN TÀI LIỆU ---
+
+  /// Gửi một yêu cầu mượn. Quyền thực tế được xác minh bởi RLS/trigger trên DB.
+  Future<bool> requestBorrow(String documentId) async {
+    final useCase = _requestDocumentBorrowUseCase;
+    if (useCase == null) {
+      _errorMessage = 'Chức năng mượn tài liệu chưa được cấu hình.';
+      notifyListeners();
+      return false;
+    }
+
+    _clearError();
+    try {
+      await useCase.execute(documentId: documentId);
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _errorMessage = _borrowErrorMessage(e);
+      notifyListeners();
+      return false;
+    }
+  }
+
+  /// Danh sách yêu cầu của một tài liệu; RLS chỉ trả về dữ liệu người gọi được xem.
+  Future<List<BorrowRequest>> getBorrowRequestsForDocument(
+    String documentId,
+  ) async {
+    final useCase = _getDocumentBorrowRequestsUseCase;
+    if (useCase == null) return [];
+
+    _clearError();
+    try {
+      return await useCase.execute(documentId: documentId);
+    } catch (e) {
+      _errorMessage = _borrowErrorMessage(e);
+      notifyListeners();
+      return [];
+    }
+  }
+
+  /// Trạng thái yêu cầu mới nhất của người dùng hiện tại cho tài liệu này.
+  Future<BorrowRequest?> getMyBorrowRequest(String documentId) async {
+    final useCase = _getMyBorrowRequestUseCase;
+    if (useCase == null) return null;
+
+    _clearError();
+    try {
+      return await useCase.execute(documentId: documentId);
+    } catch (e) {
+      _errorMessage = _borrowErrorMessage(e);
+      notifyListeners();
+      return null;
+    }
+  }
+
+  /// Chủ sở hữu duyệt hoặc từ chối. RLS/trigger là lớp bảo vệ cuối cùng.
+  Future<bool> reviewBorrowRequest({
+    required String requestId,
+    required String status,
+  }) async {
+    final useCase = _reviewBorrowRequestUseCase;
+    if (useCase == null) {
+      _errorMessage = 'Chức năng duyệt yêu cầu mượn chưa được cấu hình.';
+      notifyListeners();
+      return false;
+    }
+
+    _clearError();
+    try {
+      await useCase.execute(requestId: requestId, status: status);
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _errorMessage = _borrowErrorMessage(e);
+      notifyListeners();
+      return false;
+    }
+  }
+
+  /// Người mượn xác nhận đã trả tài liệu sau khi yêu cầu được duyệt.
+  Future<bool> markBorrowRequestReturned(String requestId) async {
+    final useCase = _returnBorrowRequestUseCase;
+    if (useCase == null) {
+      _errorMessage = 'Chức năng xác nhận trả tài liệu chưa được cấu hình.';
+      notifyListeners();
+      return false;
+    }
+
+    _clearError();
+    try {
+      await useCase.execute(requestId: requestId);
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _errorMessage = _borrowErrorMessage(e);
+      notifyListeners();
+      return false;
+    }
+  }
+
+  String _borrowErrorMessage(Object error) => error
+      .toString()
+      .replaceFirst('Exception: ', '')
+      .replaceFirst('StateError: ', '')
+      .replaceFirst('ArgumentError: ', '');
 
   // --- PRIVATE HELPERS ---
   Future<void> _applyFilter() async {

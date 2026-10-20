@@ -6,6 +6,8 @@ import '../../domain/entities/document.dart';
 import '../controllers/document_controller.dart';
 import '../theme/app_theme.dart';
 import '../utils/file_helper.dart';
+import 'borrow_request_action.dart';
+import 'borrow_requests_dialog.dart';
 import 'document_form_modal.dart';
 import 'document_location_map.dart';
 import 'share_document_dialog.dart';
@@ -586,6 +588,32 @@ class DocumentDetailModal extends StatelessWidget {
 
                   // Bottom Action Buttons theo vai trò người dùng (Owner / Editor / Viewer)
                   if (document.isOwner) ...[
+                    if (controller.canManageBorrowRequests) ...[
+                      SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton.icon(
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: AppTheme.primary,
+                            side: const BorderSide(color: AppTheme.primary),
+                            padding: const EdgeInsets.symmetric(vertical: 13),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                          ),
+                          icon: const Icon(
+                            Icons.mark_email_unread_outlined,
+                            size: 18,
+                          ),
+                          label: const Text('Quản lý yêu cầu mượn'),
+                          onPressed: () => BorrowRequestsDialog.show(
+                            context,
+                            document: document,
+                            controller: controller,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                    ],
                     Row(
                       children: [
                         if (controller.canManagePermissions) ...[
@@ -654,52 +682,76 @@ class DocumentDetailModal extends StatelessWidget {
                       ],
                     ),
                   ] else if (document.canEdit) ...[
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton.icon(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppTheme.primary,
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(14),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        if (controller.canRequestBorrow) ...[
+                          BorrowRequestAction(
+                            document: document,
+                            controller: controller,
+                          ),
+                          const SizedBox(height: 10),
+                        ],
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton.icon(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppTheme.primary,
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                            ),
+                            icon: const Icon(Icons.edit_rounded, size: 18),
+                            label: const Text('Chỉnh sửa thông tin (Editor)'),
+                            onPressed: () {
+                              Navigator.pop(context);
+                              DocumentFormModal.show(
+                                context,
+                                controller: controller,
+                                document: document,
+                              );
+                            },
                           ),
                         ),
-                        icon: const Icon(Icons.edit_rounded, size: 18),
-                        label: const Text('Chỉnh sửa thông tin (Editor)'),
-                        onPressed: () {
-                          Navigator.pop(context);
-                          DocumentFormModal.show(
-                            context,
-                            controller: controller,
-                            document: document,
-                          );
-                        },
-                      ),
+                      ],
                     ),
                   ] else ...[
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: AppTheme.surfaceVariant,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: AppTheme.border),
-                      ),
-                      child: const Row(
-                        children: [
-                          Icon(Icons.lock_outline_rounded,
-                              size: 18, color: AppTheme.textSecondary),
-                          SizedBox(width: 10),
-                          Expanded(
-                            child: Text(
-                              'Bạn có quyền Chỉ xem (Viewer). Chức năng chỉnh sửa và xóa bị vô hiệu hóa.',
-                              style: TextStyle(
-                                  fontSize: 12.5,
-                                  color: AppTheme.textSecondary),
-                            ),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        if (controller.canRequestBorrow) ...[
+                          BorrowRequestAction(
+                            document: document,
+                            controller: controller,
                           ),
+                          const SizedBox(height: 12),
                         ],
-                      ),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: AppTheme.surfaceVariant,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: AppTheme.border),
+                          ),
+                          child: const Row(
+                            children: [
+                              Icon(Icons.lock_outline_rounded,
+                                  size: 18, color: AppTheme.textSecondary),
+                              SizedBox(width: 10),
+                              Expanded(
+                                child: Text(
+                                  'Bạn có quyền Chỉ xem (Viewer). Chức năng chỉnh sửa và xóa bị vô hiệu hóa.',
+                                  style: TextStyle(
+                                      fontSize: 12.5,
+                                      color: AppTheme.textSecondary),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ],

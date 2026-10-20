@@ -9,8 +9,10 @@ import 'data/datasources/document_local_datasource.dart';
 import 'data/repositories/document_repository_impl.dart';
 import 'data/repositories/firebase_document_storage_repository.dart';
 import 'data/repositories/firestore_document_repository.dart';
+import 'data/repositories/supabase_borrow_request_repository.dart';
 import 'data/repositories/supabase_document_repository.dart';
 import 'data/repositories/supabase_document_storage_repository.dart';
+import 'domain/repositories/i_borrow_request_repository.dart';
 import 'domain/repositories/i_document_permission_repository.dart';
 import 'domain/repositories/i_document_repository.dart';
 import 'domain/repositories/i_document_storage_repository.dart';
@@ -21,10 +23,15 @@ import 'presentation/screens/firebase_auth_gate.dart';
 import 'presentation/theme/app_theme.dart';
 import 'usecases/add_document_usecase.dart';
 import 'usecases/delete_document_usecase.dart';
+import 'usecases/get_document_borrow_requests_usecase.dart';
 import 'usecases/get_document_permissions_usecase.dart';
 import 'usecases/get_document_stats_usecase.dart';
 import 'usecases/get_documents_usecase.dart';
+import 'usecases/get_my_borrow_request_usecase.dart';
+import 'usecases/request_document_borrow_usecase.dart';
+import 'usecases/review_borrow_request_usecase.dart';
 import 'usecases/revoke_document_permission_usecase.dart';
+import 'usecases/return_borrow_request_usecase.dart';
 import 'usecases/search_documents_usecase.dart';
 import 'usecases/share_document_usecase.dart';
 import 'usecases/update_document_usecase.dart';
@@ -90,11 +97,13 @@ Future<void> main() async {
   // Dự phòng Firestore hoặc Local DataSource khi chưa có kết nối mạng
   late final IDocumentRepository documentRepository;
   IDocumentPermissionRepository? permissionRepository;
+  IBorrowRequestRepository? borrowRequestRepository;
 
   if (isSupabaseReady) {
     final supabaseRepo = SupabaseDocumentRepository();
     documentRepository = supabaseRepo;
     permissionRepository = supabaseRepo;
+    borrowRequestRepository = SupabaseBorrowRequestRepository();
     debugPrint('Using SupabaseDocumentRepository (Multi-tenant RLS active).');
   } else if (isFirebaseReady) {
     documentRepository = FirestoreDocumentRepository();
@@ -136,6 +145,24 @@ Future<void> main() async {
       ? RevokeDocumentPermissionUseCase(repository: permissionRepository)
       : null;
 
+  // Luồng mượn chỉ bật khi đang sử dụng Supabase; Firebase/Local fallback
+  // không giả lập dữ liệu mượn và không thay đổi hành vi của các chế độ đó.
+  final requestDocumentBorrowUseCase = borrowRequestRepository != null
+      ? RequestDocumentBorrowUseCase(repository: borrowRequestRepository)
+      : null;
+  final getDocumentBorrowRequestsUseCase = borrowRequestRepository != null
+      ? GetDocumentBorrowRequestsUseCase(repository: borrowRequestRepository)
+      : null;
+  final getMyBorrowRequestUseCase = borrowRequestRepository != null
+      ? GetMyBorrowRequestUseCase(repository: borrowRequestRepository)
+      : null;
+  final reviewBorrowRequestUseCase = borrowRequestRepository != null
+      ? ReviewBorrowRequestUseCase(repository: borrowRequestRepository)
+      : null;
+  final returnBorrowRequestUseCase = borrowRequestRepository != null
+      ? ReturnBorrowRequestUseCase(repository: borrowRequestRepository)
+      : null;
+
   // 6. Khởi tạo DocumentController
   final documentController = DocumentController(
     addDocumentUseCase: addDocumentUseCase,
@@ -148,6 +175,11 @@ Future<void> main() async {
     shareDocumentUseCase: shareDocumentUseCase,
     getDocumentPermissionsUseCase: getDocumentPermissionsUseCase,
     revokeDocumentPermissionUseCase: revokeDocumentPermissionUseCase,
+    requestDocumentBorrowUseCase: requestDocumentBorrowUseCase,
+    getDocumentBorrowRequestsUseCase: getDocumentBorrowRequestsUseCase,
+    getMyBorrowRequestUseCase: getMyBorrowRequestUseCase,
+    reviewBorrowRequestUseCase: reviewBorrowRequestUseCase,
+    returnBorrowRequestUseCase: returnBorrowRequestUseCase,
   );
 
   // Ở chế độ local chưa có Auth, nạp dữ liệu sớm

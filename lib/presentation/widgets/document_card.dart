@@ -36,7 +36,8 @@ class DocumentCard extends StatelessWidget {
         child: const Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.workspace_premium_rounded, size: 12, color: Color(0xFFE65100)),
+            Icon(Icons.workspace_premium_rounded,
+                size: 12, color: Color(0xFFE65100)),
             SizedBox(width: 3),
             Text(
               'Chủ sở hữu',
@@ -115,11 +116,19 @@ class DocumentCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Hàng Header: Badge phân loại + Vai trò + Môn học + Favorite + Menu
-              Row(
+
+              // Header responsive: tự xuống dòng khi chiều rộng hạn chế
+              Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
-                  // Badge Phân loại
+                  // Badge phân loại
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: type.badgeBackgroundColor,
                       borderRadius: BorderRadius.circular(8),
@@ -127,7 +136,11 @@ class DocumentCard extends StatelessWidget {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(type.icon, size: 14, color: type.primaryColor),
+                        Icon(
+                          type.icon,
+                          size: 14,
+                          color: type.primaryColor,
+                        ),
                         const SizedBox(width: 4),
                         Text(
                           type.displayName,
@@ -140,16 +153,18 @@ class DocumentCard extends StatelessWidget {
                       ],
                     ),
                   ),
-                  const SizedBox(width: 6),
 
-                  // Huy hiệu vai trò (Chủ sở hữu / Biên tập / Chỉ xem)
+                  // Huy hiệu vai trò
                   _buildRoleBadge(),
-                  const SizedBox(width: 6),
 
-                  // Chip Môn học
-                  Flexible(
+                  // Chip môn học: giới hạn độ rộng và rút gọn nội dung dài
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 160),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
                       decoration: BoxDecoration(
                         color: AppTheme.surfaceVariant,
                         borderRadius: BorderRadius.circular(8),
@@ -167,13 +182,15 @@ class DocumentCard extends StatelessWidget {
                     ),
                   ),
 
-                  const Spacer(),
-
-                  // Nút Favorite
+                  // Nút yêu thích
                   IconButton(
                     icon: Icon(
-                      document.isFavorite ? Icons.star_rounded : Icons.star_outline_rounded,
-                      color: document.isFavorite ? Colors.amber : AppTheme.textSecondary,
+                      document.isFavorite
+                          ? Icons.star_rounded
+                          : Icons.star_outline_rounded,
+                      color: document.isFavorite
+                          ? Colors.amber
+                          : AppTheme.textSecondary,
                       size: 22,
                     ),
                     padding: EdgeInsets.zero,
@@ -182,11 +199,14 @@ class DocumentCard extends StatelessWidget {
                     tooltip: document.isFavorite ? 'Bỏ yêu thích' : 'Yêu thích',
                     onPressed: () => controller.toggleFavorite(document.id),
                   ),
-                  const SizedBox(width: 8),
 
-                  // Menu tùy chọn linh hoạt theo vai trò
+                  // Menu tùy chọn theo vai trò
                   PopupMenuButton<String>(
-                    icon: const Icon(Icons.more_vert_rounded, size: 20, color: AppTheme.textSecondary),
+                    icon: const Icon(
+                      Icons.more_vert_rounded,
+                      size: 20,
+                      color: AppTheme.textSecondary,
+                    ),
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(),
                     splashRadius: 20,
@@ -202,39 +222,58 @@ class DocumentCard extends StatelessWidget {
                       }
                     },
                     itemBuilder: (context) => [
-                      // Chỉ Chủ sở hữu mới có quyền chia sẻ
+                      // Chỉ chủ sở hữu được chia sẻ
                       if (document.isOwner && controller.canManagePermissions)
                         const PopupMenuItem(
                           value: 'share',
                           child: Row(
                             children: [
-                              Icon(Icons.share_outlined, size: 18, color: AppTheme.primary),
+                              Icon(
+                                Icons.share_outlined,
+                                size: 18,
+                                color: AppTheme.primary,
+                              ),
                               SizedBox(width: 8),
                               Text('Chia sẻ quyền'),
                             ],
                           ),
                         ),
-                      // Chủ sở hữu và Editor có quyền sửa
+
+                      // Chủ sở hữu và Editor được sửa
                       if (document.canEdit)
                         const PopupMenuItem(
                           value: 'edit',
                           child: Row(
                             children: [
-                              Icon(Icons.edit_outlined, size: 18, color: AppTheme.primary),
+                              Icon(
+                                Icons.edit_outlined,
+                                size: 18,
+                                color: AppTheme.primary,
+                              ),
                               SizedBox(width: 8),
                               Text('Chỉnh sửa'),
                             ],
                           ),
                         ),
-                      // Duy nhất Chủ sở hữu có quyền xóa
+
+                      // Chỉ chủ sở hữu được xóa
                       if (document.isOwner)
                         const PopupMenuItem(
                           value: 'delete',
                           child: Row(
                             children: [
-                              Icon(Icons.delete_outline_rounded, size: 18, color: AppTheme.error),
+                              Icon(
+                                Icons.delete_outline_rounded,
+                                size: 18,
+                                color: AppTheme.error,
+                              ),
                               SizedBox(width: 8),
-                              Text('Xóa tài liệu', style: TextStyle(color: AppTheme.error)),
+                              Text(
+                                'Xóa tài liệu',
+                                style: TextStyle(
+                                  color: AppTheme.error,
+                                ),
+                              ),
                             ],
                           ),
                         ),
@@ -278,7 +317,8 @@ class DocumentCard extends StatelessWidget {
                 const SizedBox(height: 6),
                 Row(
                   children: [
-                    const Icon(Icons.person_pin_rounded, size: 14, color: AppTheme.textSecondary),
+                    const Icon(Icons.person_pin_rounded,
+                        size: 14, color: AppTheme.textSecondary),
                     const SizedBox(width: 4),
                     Text(
                       'Chia sẻ bởi: ${document.authorEmail}',
@@ -296,10 +336,12 @@ class DocumentCard extends StatelessWidget {
               if (document.hasFileOrLink) ...[
                 const SizedBox(height: 10),
                 InkWell(
-                  onTap: () => FileHelper.openDocument(context, document.fileUrlOrPath),
+                  onTap: () =>
+                      FileHelper.openDocument(context, document.fileUrlOrPath),
                   borderRadius: BorderRadius.circular(10),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
                     decoration: BoxDecoration(
                       color: AppTheme.surfaceVariant,
                       borderRadius: BorderRadius.circular(10),
@@ -346,7 +388,8 @@ class DocumentCard extends StatelessWidget {
                   runSpacing: 4,
                   children: document.tags.take(3).map((tag) {
                     return Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 3),
                       decoration: BoxDecoration(
                         color: AppTheme.surfaceVariant,
                         borderRadius: BorderRadius.circular(6),
