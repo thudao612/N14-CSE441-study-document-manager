@@ -1,6 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-// Tự động liên kết đến file thuật toán bạn làm ở Bước 1
-import 'package:my_first_app/document_recommendation.dart';
+import 'package:study_document_manager/document_recommendation.dart';
 
 void main() {
   group('Kiểm thử hệ thống thuật toán gợi ý tài liệu học tập (CL5)', () {

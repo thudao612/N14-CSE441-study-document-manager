@@ -36,6 +36,22 @@ class DocumentFilterBar extends StatelessWidget {
           ),
           const SizedBox(width: 8),
 
+          // Lọc "Gợi ý cho bạn" (Recommendation Engine) - Đặt ở vị trí thứ 2 để mobile thấy ngay lập tức
+          _FilterChipItem(
+            label: '🌟 Gợi ý cho bạn',
+            icon: Icons.auto_awesome_rounded,
+            iconColor: const Color(0xFF8E24AA),
+            isSelected: controller.sourceFilter == 'recommended',
+            onTap: () {
+              if (controller.sourceFilter == 'recommended') {
+                controller.setSourceFilter('all');
+              } else {
+                controller.setSourceFilter('recommended');
+              }
+            },
+          ),
+          const SizedBox(width: 8),
+
           // Lọc "Của tôi" (Chủ sở hữu)
           _FilterChipItem(
             label: 'Của tôi',

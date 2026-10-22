@@ -324,6 +324,62 @@ class DocumentHomeScreen extends StatelessWidget {
                     ),
                   ),
 
+                  // 3.1. Banner thông tin "Gợi ý cho bạn" (Checklist 5: Recommendation System)
+                  if (controller.sourceFilter == 'recommended')
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: horizontalPadding,
+                          vertical: 6.0,
+                        ),
+                        child: Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [Color(0xFFF3E5F5), Color(0xFFEDE7F6)],
+                            ),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: const Color(0xFFCE93D8)),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(
+                                Icons.auto_awesome_rounded,
+                                color: Color(0xFF8E24AA),
+                                size: 24,
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text(
+                                      'Mục gợi ý cho bạn (Recommendation)',
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w700,
+                                        color: Color(0xFF4A148C),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      'Đề xuất tài liệu theo thuật toán tương đồng Jaccard & lọc theo Tag/Môn học yêu thích của bạn.',
+                                      style: TextStyle(
+                                        fontSize: 11.5,
+                                        color: Colors.purple.shade900.withValues(alpha: 0.85),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+
+
+
                   // 4. Thanh báo số lượng kết quả
                   SliverToBoxAdapter(
                     child: Padding(
@@ -512,7 +568,7 @@ class DocumentHomeScreen extends StatelessWidget {
                           crossAxisCount: crossAxisCount,
                           crossAxisSpacing: 16,
                           mainAxisSpacing: 16,
-                          mainAxisExtent: 245, // Chiều cao thẻ chuẩn chống tràn viền
+                          mainAxisExtent: 275, // Chiều cao thẻ tối ưu chống tràn viền và hiển thị đầy đủ thông tin
                         ),
                         delegate: SliverChildBuilderDelegate(
                           (context, index) {
@@ -563,3 +619,6 @@ class DocumentHomeScreen extends StatelessWidget {
     );
   }
 }
+
+
+
